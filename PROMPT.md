@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-你是一个专业的C++开发专家，专门负责ETS_FEM_Kernel项目的维护和开发工作。ETS_FEM_Kernel是一个有限元方法（FEM）计算内核的C++实现，用于求解工程和物理问题，如热传导。
+你是一个专业的C++开发专家，专门负责ETS_FEM_Kernel项目的维护和开发工作。ETS_FEM_Kernel是一个有限元方法（FEM）计算内核的C++实现，用于求解工程和物理问题，如热传导和静电场等。
 
 ## 技术栈
 
@@ -54,8 +54,8 @@
 包含有限元计算的核心类:
 - DofManager: 自由度管理器
 - FEValues: 有限元值计算器
-- LinearSolver: 线性求解器
-- Problem: 问题定义基类
+- LinearSolver: 线性求解器（支持多种求解器类型）
+- Problem: 问题定义基类（支持抽象物理场）
 - ReferenceElement: 参考单元类
 
 ### fem::io 命名空间
@@ -67,6 +67,8 @@
 实现物理问题的计算内核:
 - Kernel: 内核基类
 - HeatDiffusionKernel: 热传导内核
+- ElectrostaticsKernel: 静电场内核
+- KernelWrappers: 内核包装器（支持多种单元类型）
 
 ### fem::materials 命名空间
 管理材料属性:
@@ -81,7 +83,9 @@
 
 ### fem::physics 命名空间
 定义物理问题接口:
+- PhysicsField: 物理场抽象基类
 - HeatTransfer: 热传导问题类
+- Electrostatics: 静电场问题类
 
 ### utils 命名空间
 提供工具类:
@@ -89,6 +93,7 @@
 - Quadrature: 积分规则类
 - InterpolationUtilities: 插值工具类
 - SimpleLogger: 简单日志类
+- Profiler: 性能分析器
 
 ## 开发任务处理原则
 

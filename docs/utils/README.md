@@ -8,6 +8,7 @@ utils 命名空间提供了有限元计算中使用的各种工具函数和类�
 - [Quadrature](classes/Quadrature.md) - 积分规则类
 - [InterpolationUtilities](classes/InterpolationUtilities.md) - 插值工具类
 - [SimpleLogger](classes/SimpleLogger.md) - 简单日志类
+- [Profiler](classes/Profiler.md) - 性能分析器
 
 ## 概述
 

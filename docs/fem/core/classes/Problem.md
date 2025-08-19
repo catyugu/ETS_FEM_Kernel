@@ -13,19 +13,28 @@ class Problem
 
 ## 构造函数
 
-### Problem(std::unique_ptr<Mesh> mesh, std::unique_ptr<HeatTransfer<TDim>> physics)
+### Problem(std::unique_ptr<Mesh> mesh, std::unique_ptr<PhysicsField<TDim>> physics)
 
 构造函数，初始化问题对象。
 
 **参数:**
 - `mesh` - 网格对象的智能指针
-- `physics` - 物理场对象的智能指针
+- `physics` - 物理场对象的智能指针（继承自PhysicsField抽象类）
+
+### Problem(std::unique_ptr<Mesh> mesh, std::unique_ptr<PhysicsField<TDim>> physics, SolverType solver_type)
+
+构造函数，初始化问题对象并指定求解器类型。
+
+**参数:**
+- `mesh` - 网格对象的智能指针
+- `physics` - 物理场对象的智能指针（继承自PhysicsField抽象类）
+- `solver_type` - 求解器类型（SparseLU或ConjugateGradient）
 
 ## 成员函数
 
 ### void assemble()
 
-组装全局刚度矩阵和载荷向量。
+组装全局刚度矩阵和载荷向量。该方法现在支持稀疏模式预计算，以提高矩阵组装的性能。
 
 ### void addDirichletBC(int node_id, double value)
 
@@ -41,7 +50,7 @@ class Problem
 
 ### void solve()
 
-求解线性系统。
+求解线性系统。根据构造时指定的求解器类型，使用相应的求解算法。
 
 ### void printResults() const
 
@@ -51,69 +60,41 @@ class Problem
 
 获取网格对象的引用。
 
-**返回值:**
-- 网格对象的常量引用
-
 ### const Eigen::VectorXd& getSolution() const
 
 获取解向量的引用。
 
-**返回值:**
-- 解向量的常量引用
-
-### const HeatTransfer<TDim>& getPhysicsField() const
+### const PhysicsField<TDim>& getPhysicsField() const
 
 获取物理场对象的引用。
-
-**返回值:**
-- 物理场对象的常量引用
 
 ### const DofManager& getDofManager() const
 
 获取自由度管理器的引用。
 
-**返回值:**
-- 自由度管理器的常量引用
-
 ## 示例用法
 
 ```cpp
-// 创建网格和物理场对象
-auto mesh = std::make_unique<FEM::Mesh>();
-auto physics = std::make_unique<FEM::HeatTransfer<2>>();
+// 创建热传导问题
+auto heat_physics = std::make_unique<FEM::HeatTransfer<2>>();
+heat_physics->addKernel(
+    std::make_unique<FEM::HeatDiffusionKernel<2, 4>>(material)
+);
 
-// 创建问题对象
-FEM::Problem<2> problem(std::move(mesh), std::move(physics));
+// 使用默认求解器创建问题
+auto problem = std::make_unique<FEM::Problem<2>>(std::move(mesh), std::move(heat_physics));
 
-// 组装系统
-problem.assemble();
-
-// 添加边界条件
-problem.addDirichletBC(0, 300.0); // 节点0温度为300K
-
-// 应用边界条件
-problem.applyBCs();
-
-// 求解
-problem.solve();
-
-// 输出结果
-problem.printResults();
+// 或者指定求解器类型
+auto problem_cg = std::make_unique<FEM::Problem<2>>(
+    std::move(mesh), 
+    std::move(heat_physics), 
+    FEM::SolverType::ConjugateGradient
+);
 ```
 
-## 实现细节
+## 注意事项
 
-`Problem` 类是有限元求解流程的核心协调者，它：
-1. 管理问题的所有数据组件（网格、物理场、自由度等）
-2. 控制求解流程（组装、边界条件、求解）
-3. 提供结果访问接口
-
-该类使用模板参数 [TDim](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/Problem.hpp#L27) 表示问题的空间维度，目前主要用于热传导问题。
-
-## 依赖关系
-
-- [Mesh](file:///E:/code/cpp/ETS_FEM_Kernel/fem/mesh/Mesh.hpp#L17-L45) - 网格数据结构
-- [HeatTransfer](file:///E:/code/cpp/ETS_FEM_Kernel/fem/physics/HeatTransfer.hpp#L22-L66) - 热传导物理场
-- [DofManager](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/DofManager.hpp#L19-L61) - 自由度管理器
-- [LinearSolver](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/LinearSolver.hpp#L16-L54) - 线性求解器
-- Eigen - 稀疏矩阵和向量运算
+1. Problem类现在使用抽象的`PhysicsField`类而不是具体的`HeatTransfer`类，支持多种物理场
+2. 新增了对稀疏模式预计算的支持，以提高大型问题的组装性能
+3. 支持多种求解器类型，包括直接求解器（SparseLU）和迭代求解器（ConjugateGradient）
+4. 该类是模板类，模板参数`TDim`表示问题的维度（1D、2D或3D）

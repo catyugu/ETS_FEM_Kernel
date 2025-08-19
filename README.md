@@ -1,6 +1,6 @@
 # ETS_FEM_Kernel
 
-ETS_FEM_Kernel 是一个用 C++ 编写的有限元方法（FEM）计算内核，专门用于求解工程和物理问题，如热传导等。该项目提供了一个模块化、可扩展的有限元求解器核心，支持材料建模、网格处理、物理问题定义和线性求解。
+ETS_FEM_Kernel 是一个用 C++ 编写的有限元方法（FEM）计算内核，专门用于求解工程和物理问题，如热传导和静电场等。该项目提供了一个模块化、可扩展的有限元求解器核心，支持材料建模、网格处理、多种物理问题定义和线性求解。
 
 ## 目录结构
 
@@ -24,10 +24,11 @@ ETS_FEM_Kernel 是一个用 C++ 编写的有限元方法（FEM）计算内核，
 
 - **网格管理**: 支持节点、单元的定义与操作
 - **材料建模**: 提供基础材料属性定义
-- **物理问题定义**: 支持热传导问题建模
+- **物理问题定义**: 支持热传导、静电场等多种物理问题建模
 - **有限元计算**: 包括自由度管理、参考单元、形函数、积分规则等
 - **输入输出**: 支持模型导入与结果导出
-- **线性求解**: 集成线性方程组求解接口
+- **线性求解**: 集成多种线性方程组求解接口（直接求解器和迭代求解器）
+- **性能优化**: 稀疏模式预计算、多种求解器选项
 
 ## 技术架构
 
@@ -36,16 +37,18 @@ ETS_FEM_Kernel 是一个用 C++ 编写的有限元方法（FEM）计算内核，
 1. **Mesh模块**: 定义有限元网格的基本数据结构，包括节点(Node)和单元(Element)
 2. **Materials模块**: 管理材料属性，支持常数和函数形式的材料属性
 3. **Core模块**: 核心计算功能，包括自由度管理、有限元值计算和线性求解器
-4. **Kernels模块**: 物理内核实现，如热传导内核
-5. **Physics模块**: 物理问题定义接口
+4. **Kernels模块**: 物理内核实现，如热传导内核、静电场内核等
+5. **Physics模块**: 物理问题定义接口，支持多物理场扩展
 6. **IO模块**: 数据导入导出功能
-7. **Utils模块**: 工具类，包括形函数、积分规则、日志等
+7. **Utils模块**: 工具类，包括形函数、积分规则、日志、性能分析等
 
 ### 设计模式
 
 - **模块化架构**: 按功能划分多个模块，便于维护和扩展
 - **模板方法模式**: 在数值计算中使用模板以提高性能
-- **单例模式**: 在日志记录器等工具类中使用
+- **抽象工厂模式**: 通过抽象物理场类支持多种物理问题
+- **适配器模式**: 使用内核包装器统一管理不同类型的计算内核
+- **单例模式**: 在日志记录器、性能分析器等工具类中使用
 
 ## 技术选型
 
@@ -99,8 +102,10 @@ cmake --build .
 ```cpp
 #include "fem/core/Problem.hpp"
 #include "fem/physics/HeatTransfer.hpp"
+#include "fem/physics/Electrostatics.hpp"
 #include "fem/materials/Material.hpp"
 #include "fem/kernels/HeatDiffusionKernel.hpp"
+#include "fem/kernels/ElectrostaticsKernel.hpp"
 
 int main() {
     // 创建网格
@@ -110,13 +115,13 @@ int main() {
     FEM::Material material("Copper");
     material.setProperty("thermal_conductivity", 401.0);
     
-    // 创建物理场
+    // 创建物理场（热传导示例）
     auto physics = std::make_unique<FEM::HeatTransfer<2>>();
     auto kernel = std::make_unique<FEM::HeatDiffusionKernel<2, 4>>(material);
     physics->addKernel(std::move(kernel));
     
-    // 创建问题
-    FEM::Problem<2> problem(std::move(mesh), std::move(physics));
+    // 创建问题（使用共轭梯度求解器示例）
+    FEM::Problem<2> problem(std::move(mesh), std::move(physics), FEM::SolverType::ConjugateGradient);
     
     // 组装系统
     problem.assemble();

@@ -3,6 +3,7 @@
 #include "../mesh/Mesh.hpp"
 #include <vector>
 #include <map>
+#include <set>
 
 namespace FEM {
 
@@ -23,6 +24,9 @@ namespace FEM {
 
         // 获取总的自由度数量
         size_t getNumDofs() const;
+
+        // 计算稀疏模式，为矩阵预分配做准备
+        std::vector<std::pair<int, int>> computeSparsityPattern(const Mesh& mesh) const;
 
     private:
         const Mesh& mesh_;

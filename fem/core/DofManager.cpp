@@ -47,4 +47,23 @@ namespace FEM {
         return total_dofs_;
     }
 
+    std::vector<std::pair<int, int>> DofManager::computeSparsityPattern(const Mesh& mesh) const {
+        std::set<std::pair<int, int>> sparsity_pattern;
+
+        // 遍历所有单元
+        for (const auto& elem : mesh.getElements()) {
+            auto dofs = getElementDofs(*elem);
+            
+            // 对于每个自由度对，添加到稀疏模式中
+            for (size_t i = 0; i < dofs.size(); ++i) {
+                for (size_t j = 0; j < dofs.size(); ++j) {
+                    sparsity_pattern.insert({dofs[i], dofs[j]});
+                }
+            }
+        }
+
+        // 转换为向量返回
+        return std::vector<std::pair<int, int>>(sparsity_pattern.begin(), sparsity_pattern.end());
+    }
+
 } // namespace FEM

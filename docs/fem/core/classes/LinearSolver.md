@@ -2,7 +2,7 @@
 
 ## 描述
 
-`LinearSolver` 类提供线性方程组求解功能，用于求解有限元方法中产生的稀疏线性系统 Ax = b。该类封装了 Eigen 库的稀疏 LU 分解求解器，为有限元计算提供高效的线性求解能力。
+`LinearSolver` 类提供了线性方程组的求解功能。它封装了不同的求解算法，包括直接求解器和迭代求解器，可以根据问题的特点选择合适的求解方法。
 
 ## 类定义
 
@@ -10,52 +10,81 @@
 class LinearSolver
 ```
 
+## 枚举类型
+
+### SolverType
+
+求解器类型枚举。
+
+```cpp
+enum class SolverType {
+    SparseLU,              // 稀疏LU分解（直接求解器）
+    ConjugateGradient     // 共轭梯度法（迭代求解器）
+};
+```
+
+## 构造函数
+
+### explicit LinearSolver(SolverType type = SolverType::SparseLU)
+
+构造函数，指定求解器类型。
+
+**参数:**
+- `type` - 求解器类型，默认为SparseLU
+
 ## 成员函数
 
 ### Eigen::VectorXd solve(const Eigen::SparseMatrix<double>& A, const Eigen::VectorXd& b) const
 
-使用 Eigen 的稀疏 LU 分解求解线性系统 Ax = b。
+使用指定的求解算法求解线性系统 Ax = b。
 
 **参数:**
 - `A` - 稀疏矩阵（系数矩阵）
 - `b` - 向量（右端项）
 
 **返回值:**
-- `Eigen::VectorXd` - 求解得到的解向量 x
+- 解向量 x
 
 **异常:**
-- `std::runtime_error` - 当矩阵分解失败或求解失败时抛出
+- 如果求解失败，抛出 `std::runtime_error` 异常
+
+## 求解器说明
+
+### SparseLU（默认）
+
+使用Eigen库的稀疏LU分解方法。这是一种直接求解器，适用于中小型问题，能够提供精确解。
+
+特点：
+- 精度高
+- 对问题规模有一定限制
+- 内存消耗较大
+- 适用于需要高精度解的问题
+
+### ConjugateGradient
+
+使用共轭梯度法的迭代求解器。适用于大型对称正定系统。
+
+特点：
+- 内存效率高
+- 适用于大型问题
+- 解是近似的（取决于收敛容差）
+- 对矩阵特性有要求（对称正定）
 
 ## 示例用法
 
 ```cpp
-// 假设已经有了系数矩阵A和右端项b
-Eigen::SparseMatrix<double> A;
-Eigen::VectorXd b;
-
-// 创建线性求解器
+// 使用默认的SparseLU求解器
 FEM::LinearSolver solver;
+Eigen::VectorXd x = solver.solve(A, b);
 
-try {
-    // 求解线性系统
-    Eigen::VectorXd x = solver.solve(A, b);
-    
-    // 使用解向量x进行后续处理...
-} catch (const std::runtime_error& e) {
-    // 处理求解失败的情况
-    std::cerr << "Linear solve failed: " << e.what() << std::endl;
-}
+// 使用共轭梯度求解器
+FEM::LinearSolver cg_solver(FEM::SolverType::ConjugateGradient);
+Eigen::VectorXd x = cg_solver.solve(A, b);
 ```
 
-## 实现细节
+## 注意事项
 
-`LinearSolver` 类使用 Eigen 库的 `Eigen::SparseLU` 求解器来执行稀疏线性系统的求解。求解过程分为两个步骤：
-1. 对系数矩阵 A 进行 LU 分解
-2. 使用分解后的矩阵求解线性系统 Ax = b
-
-求解成功后，会通过 [Utils::Logger](file:///E:/code/cpp/ETS_FEM_Kernel/utils/SimpleLogger.hpp#L15-L61) 记录日志信息。
-
-## 依赖关系
-
-- Eigen 3.4.0 - 稀疏矩阵运算和线性求解
-- [utils/SimpleLogger.hpp](file:///E:/code/cpp/ETS_FEM_Kernel/utils/SimpleLogger.hpp) - 日志记录功能
+1. 默认使用SparseLU直接求解器
+2. 对于大型问题，可以考虑使用ConjugateGradient迭代求解器
+3. 迭代求解器的收敛性和精度可以通过设置容差和最大迭代次数来控制
+4. 求解失败时会抛出异常，需要适当处理

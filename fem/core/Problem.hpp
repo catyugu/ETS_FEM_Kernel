@@ -2,7 +2,7 @@
 
 #include "../mesh/Mesh.hpp"
 #include "DofManager.hpp"
-#include "../physics/HeatTransfer.hpp"
+#include "../physics/PhysicsField.hpp"
 #include "LinearSolver.hpp"
 #include <Eigen/Sparse>
 #include <iostream>
@@ -16,8 +16,8 @@ namespace FEM {
     template<int TDim>
     class Problem {
     public:
-        Problem(std::unique_ptr<Mesh> mesh, std::unique_ptr<HeatTransfer<TDim>> physics)
-            : mesh_(std::move(mesh)), physics_(std::move(physics)), dof_manager_(*mesh_) {
+        Problem(std::unique_ptr<Mesh> mesh, std::unique_ptr<PhysicsField<TDim>> physics, SolverType solver_type = SolverType::SparseLU)
+            : mesh_(std::move(mesh)), physics_(std::move(physics)), dof_manager_(*mesh_), solver_type_(solver_type) {
             dof_manager_.buildDofMap(1);
             size_t num_dofs = dof_manager_.getNumDofs();
             K_global_.resize(num_dofs, num_dofs);
@@ -27,6 +27,10 @@ namespace FEM {
         }
 
         void assemble() {
+            // 预计算稀疏模式以提高性能
+            auto sparsity_pattern = dof_manager_.computeSparsityPattern(*mesh_);
+            K_global_.reserve(sparsity_pattern.size());
+            
             physics_->assemble(*mesh_, dof_manager_, K_global_, F_global_);
         }
 
@@ -70,7 +74,7 @@ namespace FEM {
         }
 
         void solve() {
-            LinearSolver solver;
+            LinearSolver solver(solver_type_);
             U_solution_ = solver.solve(K_global_, F_global_);
         }
 
@@ -87,18 +91,18 @@ namespace FEM {
         // Exporter 需要通过这些接口来获取数据
         const Mesh& getMesh() const { return *mesh_; }
         const Eigen::VectorXd& getSolution() const { return U_solution_; }
-        const HeatTransfer<TDim>& getPhysicsField() const { return *physics_; }
+        const PhysicsField<TDim>& getPhysicsField() const { return *physics_; }
         const DofManager& getDofManager() const { return dof_manager_; }
 
     private:
         std::unique_ptr<Mesh> mesh_;
-        std::unique_ptr<HeatTransfer<TDim>> physics_;
+        std::unique_ptr<PhysicsField<TDim>> physics_;
         DofManager dof_manager_;
+        SolverType solver_type_;
 
         Eigen::SparseMatrix<double> K_global_;
         Eigen::VectorXd F_global_;
         Eigen::VectorXd U_solution_;
-
         std::vector<std::pair<int, double>> dirichlet_bcs_;
     };
 }
