@@ -1,28 +1,38 @@
 #pragma once
 
+#include "MaterialProperty.hpp" // 包含新头文件
 #include <string>
 #include <map>
-#include <stdexcept>
+#include <memory>
 
 namespace FEM {
 
     class Material {
     public:
-        // 使用 C-style 字符串作为 name 参数，避免在构造函数体之前进行不必要的 std::string 构造
         explicit Material(const char* name) : name_(name) {}
 
-        // 设置材料属性，值为 double 类型
-        void setProperty(const std::string& property_name, double value);
+        // 设置一个常数属性
+        void setProperty(const std::string& name, double value) {
+            properties_[name] = std::make_shared<MaterialProperty>(value);
+        }
 
-        // 获取材料属性
-        double getProperty(const std::string& property_name) const;
+        // 设置一个函数属性
+        void setProperty(const std::string& name, const std::function<double(const std::map<std::string, double>&)>& func) {
+            properties_[name] = std::make_shared<MaterialProperty>(func);
+        }
 
-        // 获取材料名称
-        const std::string& getName() const;
+        // 获取属性对象
+        const MaterialProperty& getProperty(const std::string& name) const {
+            if (auto it = properties_.find(name); it != properties_.end()) {
+                return *it->second;
+            }
+            throw std::runtime_error("Material property '" + name + "' not found.");
+        }
+
+        const std::string& getName() const { return name_; }
 
     private:
         std::string name_;
-        std::map<std::string, double> properties_;
+        std::map<std::string, std::shared_ptr<MaterialProperty>> properties_;
     };
-
-} // namespace FEM
+}

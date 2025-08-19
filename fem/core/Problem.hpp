@@ -87,6 +87,8 @@ namespace FEM {
         // Exporter 需要通过这些接口来获取数据
         const Mesh& getMesh() const { return *mesh_; }
         const Eigen::VectorXd& getSolution() const { return U_solution_; }
+        const HeatTransfer<TDim>& getPhysicsField() const { return *physics_; }
+        const DofManager& getDofManager() const { return dof_manager_; }
 
     private:
         std::unique_ptr<Mesh> mesh_;
