@@ -4,6 +4,7 @@
 #include "kernels/HeatDiffusionKernel.hpp"
 #include "io/Exporter.hpp"
 #include <cmath>
+#include <physics/HeatTransfer.hpp>
 
 class HeatTransferTest : public ::testing::Test {
 protected:

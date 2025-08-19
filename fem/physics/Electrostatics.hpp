@@ -11,12 +11,12 @@
 namespace FEM {
 
     /**
-     * @brief 热传导物理场类
+     * @brief 静电场物理场类
      * 
-     * 实现热传导问题的求解，计算温度分布
+     * 实现静电场问题的求解，计算电势分布
      */
     template<int TDim>
-    class HeatTransfer : public PhysicsField<TDim> {
+    class Electrostatics : public PhysicsField<TDim> {
     public:
         /**
          * @brief 添加一个计算核
@@ -50,7 +50,7 @@ namespace FEM {
          * @return 物理场名称
          */
         std::string getName() const override {
-            return "HeatTransfer";
+            return "Electrostatics";
         }
 
     private:

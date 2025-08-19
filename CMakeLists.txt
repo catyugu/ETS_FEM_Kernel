@@ -6,6 +6,10 @@ project(ETS_FEM_Kernel CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(MSVC)
+    add_compile_options(/FS)
+endif()
+
 # --- 依赖管理 ---
 # --- Google Test (使用现代的 FetchContent 方法) ---
 include(FetchContent)
@@ -47,7 +51,7 @@ include_directories(
 # --- 构建核心库 (fem_library) ---
 
 # 自动收集所有位于 /fem 目录下的源文件
-file(GLOB_RECURSE FEM_SOURCES "fem/**/*.cpp")
+file(GLOB_RECURSE FEM_SOURCES "fem/**/*.cpp" "utils/*.cpp")
 
 # 创建一个静态库，包含所有核心FEM逻辑
 add_library(fem_library STATIC ${FEM_SOURCES})
@@ -87,3 +91,9 @@ gtest_discover_tests(fem_tests)
 # --- 输出信息 ---
 message(STATUS "Eigen3 include dirs: ${EIGEN3_INCLUDE_DIRS}")
 message(STATUS "Building application 'solver_app' and tests 'fem_tests'...")
+if(MSVC)
+    # 禁用 C4819 警告
+    target_compile_options(fem_tests PRIVATE /wd4819)
+    target_compile_options(fem_library PRIVATE /wd4819)
+    target_compile_options(solver_app PRIVATE /wd4819)
+endif()
