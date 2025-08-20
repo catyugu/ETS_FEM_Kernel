@@ -101,4 +101,9 @@ for (size_t q = 0; q < fe_values.n_quad_points(); ++q) {
 - 形状函数在实际坐标下的梯度
 - B矩阵（根据分析类型构建）
 
-通过这种方式，避免了在每次积分点计算时重复计算这些昂贵的操作，提高了计算效率。
+## 依赖关系
+
+- [Element](../../mesh/classes/Element.md) - 单元类
+- [ReferenceElement](ReferenceElement.md) - 参考单元数据
+- [AnalysisType](../AnalysisTypes.hpp) - 分析类型枚举
+- Eigen - 矩阵运算库

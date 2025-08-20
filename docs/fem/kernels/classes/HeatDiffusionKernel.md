@@ -2,7 +2,7 @@
 
 ## 描述
 
-`HeatDiffusionKernel` 类是热传导问题的物理内核实现，继承自 [Kernel](file:///E:/code/cpp/ETS_FEM_Kernel/fem/kernels/Kernel.hpp#L15-L26) 基类。该类负责计算热传导问题的单元刚度矩阵，是有限元热分析的核心计算组件。
+`HeatDiffusionKernel` 类是热传导问题的物理内核实现，继承自 [Kernel](Kernel.md) 基类。该类负责计算热传导问题的单元刚度矩阵，是有限元热分析的核心计算组件。
 
 ## 类定义
 
@@ -63,12 +63,12 @@ K_elem += B^T * D * B * dV
 - D 是材料属性矩阵（对于热传导问题，是一个标量，即热导率）
 - dV 是体积微元（通过雅可比行列式和积分权重计算）
 
-该实现使用 [FEValues](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/FEValues.hpp#L21-L66) 类来计算形函数梯度和几何信息，并从材料属性中获取热导率。
+该实现使用 [FEValues](../../core/classes/FEValues.md) 类来计算形函数梯度和几何信息，并从材料属性中获取热导率。
 
 ## 依赖关系
 
-- [Kernel](file:///E:/code/cpp/ETS_FEM_Kernel/fem/kernels/Kernel.hpp#L15-L26) - 基类
-- [Material](file:///E:/code/cpp/ETS_FEM_Kernel/fem/materials/Material.hpp#L15-L41) - 材料属性
-- [FEValues](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/FEValues.hpp#L21-L66) - 有限元值计算
-- [Element](file:///E:/code/cpp/ETS_FEM_Kernel/fem/mesh/Element.hpp#L28-L77) - 单元数据结构
+- [Kernel](Kernel.md) - 基类
+- [Material](../../materials/classes/Material.md) - 材料属性
+- [FEValues](../../core/classes/FEValues.md) - 有限元值计算
+- [Element](../../mesh/classes/Element.md) - 单元数据结构
 - Eigen - 矩阵运算库

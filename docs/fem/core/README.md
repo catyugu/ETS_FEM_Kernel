@@ -4,6 +4,7 @@ fem::core 命名空间包含了有限元计算的核心类和功能，负责管�
 
 ## 类列表
 
+- [AnalysisType](classes/AnalysisTypes.md)
 - [DofManager](classes/DofManager.md) - 自由度管理器
 - [FEValues](classes/FEValues.md) - 有限元值计算器
 - [LinearSolver](classes/LinearSolver.md) - 线性求解器

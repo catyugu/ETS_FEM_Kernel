@@ -2,7 +2,7 @@
 
 ## 描述
 
-`Material` 类表示有限元分析中的材料，用于存储和管理材料的各种物理属性。该类使用属性名称作为键，存储一组 [MaterialProperty](file:///E:/code/cpp/ETS_FEM_Kernel/fem/materials/MaterialProperty.hpp#L15-L50) 对象，可以表示常数属性或依赖于其他变量的函数属性。
+`Material` 类表示有限元分析中的材料，用于存储和管理材料的各种物理属性。该类使用属性名称作为键，存储一组 [MaterialProperty](MaterialProperty.md) 对象，可以表示常数属性或依赖于其他变量的函数属性。
 
 ## 类定义
 
@@ -66,6 +66,9 @@ FEM::Material material("Copper");
 // 设置常数属性
 material.setProperty("thermal_conductivity", 401.0); // W/(m·K)
 
+// 设置电导率属性
+material.setProperty("electrical_conductivity", 5.96e7); // S/m
+
 // 设置函数属性
 material.setProperty("density", [](const std::map<std::string, double>& vars) {
     // 密度可能依赖于温度等变量
@@ -81,9 +84,9 @@ double k = k_prop.evaluate(); // 对于常数属性
 
 ## 实现细节
 
-`Material` 类使用 `std::map<std::string, std::shared_ptr<MaterialProperty>>` 来存储材料属性，其中键是属性名称，值是 [MaterialProperty](file:///E:/code/cpp/ETS_FEM_Kernel/fem/materials/MaterialProperty.hpp#L15-L50) 对象的智能指针。这种设计允许材料拥有任意数量的不同属性，并且可以方便地通过名称检索。
+`Material` 类使用 `std::map<std::string, std::shared_ptr<MaterialProperty>>` 来存储材料属性，其中键是属性名称，值是 [MaterialProperty](MaterialProperty.md) 对象的智能指针。这种设计允许材料拥有任意数量的不同属性，并且可以方便地通过名称检索。
 
 ## 依赖关系
 
-- [MaterialProperty](file:///E:/code/cpp/ETS_FEM_Kernel/fem/materials/MaterialProperty.hpp#L15-L50) - 材料属性类
+- [MaterialProperty](MaterialProperty.md) - 材料属性类
 - STL - 字符串、映射、智能指针等标准库组件

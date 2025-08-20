@@ -79,3 +79,12 @@ electrostatics->addKernel(std::move(kernel));
 2. 材料必须包含"electrical_conductivity"属性，单位为西门子每米(S/m)
 3. 该内核适用于标量静电场问题
 4. 计算假设电导率在单元内为常数
+5. 使用 [FEValues](../../core/classes/FEValues.md) 类进行有限元值计算
+
+## 依赖关系
+
+- [Kernel](Kernel.md) - 基类
+- [Material](../../materials/classes/Material.md) - 材料属性
+- [FEValues](../../core/classes/FEValues.md) - 有限元值计算
+- [Element](../../mesh/classes/Element.md) - 单元数据结构
+- Eigen - 矩阵运算库

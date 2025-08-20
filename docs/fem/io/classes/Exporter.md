@@ -45,16 +45,16 @@ try {
 
 ## 实现细节
 
-`Exporter` 类提供了一个模板函数 [write_vtk](file:///E:/code/cpp/ETS_FEM_Kernel/fem/io/Exporter.cpp#L15-L66)，用于将 [Problem](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/Problem.hpp#L25-L86) 对象中的结果数据导出为 VTK 格式的文件。VTK（Visualization Toolkit）格式是一种广泛支持的科学数据格式，可以被多种可视化软件（如 ParaView）读取。
+`Exporter` 类提供了一个模板函数 [write_vtk](file:///E:/code/cpp/ETS_FEM_Kernel/fem/io/Exporter.cpp#L15-L66)，用于将 [Problem](../../core/classes/Problem.md) 对象中的结果数据导出为 VTK 格式的文件。VTK（Visualization Toolkit）格式是一种广泛支持的科学数据格式，可以被多种可视化软件（如 ParaView）读取。
 
 导出的数据包括：
 1. 网格节点坐标
 2. 单元连接信息
-3. 节点温度解（标量场）
+3. 节点解（标量场）
 
-该函数通过 [Problem](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/Problem.hpp#L25-L86) 类的公共访问器获取网格和解数据：
-- [getMesh()](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/Problem.hpp#L57-L57) - 获取网格数据
-- [getSolution()](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/Problem.hpp#L58-L58) - 获取解向量
+该函数通过 [Problem](../../core/classes/Problem.md) 类的公共访问器获取网格和解数据：
+- [getMesh()](../../core/classes/Problem.md) - 获取网格数据
+- [getSolution()](../../core/classes/Problem.md) - 获取解向量
 
 支持的单元类型：
 - 线单元（2节点）
@@ -63,5 +63,5 @@ try {
 
 ## 依赖关系
 
-- [Problem](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/Problem.hpp#L25-L86) - 有限元问题类
+- [Problem](../../core/classes/Problem.md) - 有限元问题类
 - STL - 文件流等标准库组件
