@@ -47,11 +47,12 @@ class ReferenceElement
 支持的单元类型包括：
 - 线单元（ElementType::Line）
 - 四边形单元（ElementType::Quadrilateral）
+- 四面体单元（ElementType::Tetrahedron）
 - 六面体单元（ElementType::Hexahedron）
 
 ## 依赖关系
 
-- [ElementType](file:///E:/code/cpp/ETS_FEM_Kernel/fem/mesh/Element.hpp#L12-L16) - 单元类型枚举
-- [Utils::Quadrature](file:///E:/code/cpp/ETS_FEM_Kernel/utils/Quadrature.hpp#L15-L57) - 积分规则
-- [Utils::ShapeFunctions](file:///E:/code/cpp/ETS_FEM_Kernel/utils/ShapeFunctions.hpp#L15-L71) - 形函数计算
+- [ElementType](../../mesh/classes/Element.md) - 单元类型枚举
+- [Utils::Quadrature](../../../utils/classes/Quadrature.md) - 积分规则
+- [Utils::ShapeFunctions](../../../utils/classes/ShapeFunctions.md) - 形函数计算
 - Eigen - 向量和矩阵运算

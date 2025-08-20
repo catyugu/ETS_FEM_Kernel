@@ -22,8 +22,6 @@ namespace FEM {
                 fe_values.reinit(q);
 
                 // 在一个完整实现中，我们会先插值温度T_q
-                // auto vars = InterpolationUtilities::interpolateAtQuadraturePoint(...);
-                // double k = k_prop.evaluate(vars);
 
                 // 简化：暂时仍使用常数
                 double k = k_prop.evaluate();

@@ -52,9 +52,6 @@ class Problem
 
 求解线性系统。根据构造时指定的求解器类型，使用相应的求解算法。
 
-### void printResults() const
-
-打印计算结果到标准输出。
 
 ### const Mesh& getMesh() const
 

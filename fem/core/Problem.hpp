@@ -9,6 +9,7 @@
 #include <vector>
 #include <utility>
 #include <algorithm>
+#include <utils/Profiler.hpp>
 
 // 注意：我们已经移除了 #include "../io/Exporter.hpp"
 
@@ -27,7 +28,7 @@ namespace FEM {
         }
 
         void assemble() {
-            // 预计算稀疏模式以提高性能
+            PROFILE_FUNCTION();
             auto sparsity_pattern = dof_manager_.computeSparsityPattern(*mesh_);
             K_global_.reserve(sparsity_pattern.size());
             
@@ -40,6 +41,7 @@ namespace FEM {
         }
 
         void applyBCs() {
+            PROFILE_FUNCTION();
             std::vector<int> bc_dofs;
             for(const auto& bc : dirichlet_bcs_){
                 bc_dofs.push_back(bc.first);
@@ -49,6 +51,7 @@ namespace FEM {
             for (const auto& bc : dirichlet_bcs_) {
                 int dof_index = bc.first;
                 double value = bc.second;
+                
                 for (int j = 0; j < K_global_.rows(); ++j) {
                     if (!std::binary_search(bc_dofs.begin(), bc_dofs.end(), j)) {
                          F_global_(j) -= K_global_.coeff(j, dof_index) * value;
@@ -60,6 +63,7 @@ namespace FEM {
                 int dof_index = bc.first;
                 double value = bc.second;
 
+                // 遍历矩阵的第k列
                 for (int k = 0; k < K_global_.outerSize(); ++k) {
                     for (Eigen::SparseMatrix<double>::InnerIterator it(K_global_, k); it; ++it) {
                         if (it.row() == dof_index || it.col() == dof_index) {
@@ -67,24 +71,17 @@ namespace FEM {
                         }
                     }
                 }
+
                 K_global_.coeffRef(dof_index, dof_index) = 1.0;
                 F_global_(dof_index) = value;
             }
+            
             K_global_.makeCompressed();
         }
 
         void solve() {
             LinearSolver solver(solver_type_);
             U_solution_ = solver.solve(K_global_, F_global_);
-        }
-
-        void printResults() const {
-            std::cout << "Node ID\tTemperature (K)" << std::endl;
-            std::cout << "-------\t-----------------" << std::endl;
-            for (size_t i = 0; i < mesh_->getNodes().size(); ++i) {
-                int dof = dof_manager_.getNodeDof(i, 0);
-                std::cout << i << "\t" << U_solution_(dof) << std::endl;
-            }
         }
 
         // --- 新增的公共访问器 (Getters) ---

@@ -35,6 +35,8 @@ namespace FEM {
                 data.q_points = Utils::Quadrature::getLineQuadrature(order);
             } else if (type == ElementType::Quadrilateral) {
                 data.q_points = Utils::Quadrature::getQuadrilateralQuadrature(order);
+            } else if (type == ElementType::Tetrahedron) {
+                data.q_points = Utils::Quadrature::getTetrahedronQuadrature(order);
             } else if (type == ElementType::Hexahedron) {
                 data.q_points = Utils::Quadrature::getHexahedronQuadrature(order);
             }
@@ -48,6 +50,9 @@ namespace FEM {
                 } else if (type == ElementType::Quadrilateral) {
                     Utils::ShapeFunctions::getQuadShapeFunctions(order, qp.point(0), qp.point(1), N);
                     Utils::ShapeFunctions::getQuadShapeFunctionDerivatives(order, qp.point(0), qp.point(1), dN_dxi);
+                } else if (type == ElementType::Tetrahedron) {
+                    Utils::ShapeFunctions::getTetShapeFunctions(order, qp.point(0), qp.point(1), qp.point(2), N);
+                    Utils::ShapeFunctions::getTetShapeFunctionDerivatives(order, qp.point(0), qp.point(1), qp.point(2), dN_dxi);
                 } else if (type == ElementType::Hexahedron) {
                     Utils::ShapeFunctions::getHexShapeFunctions(order, qp.point(0), qp.point(1), qp.point(2), N);
                     Utils::ShapeFunctions::getHexShapeFunctionDerivatives(order, qp.point(0), qp.point(1), qp.point(2), dN_dxi);

@@ -26,7 +26,7 @@ class DofManager
 构建自由度映射表。
 
 **参数:**
-- `dofs_per_node` - 每个节点的自由度数量
+- `dofs_per_node` - 每个节点的自由度数量 (例如，热学问题为1)
 
 ### std::vector<int> getElementDofs(const Element& element) const
 
@@ -48,6 +48,9 @@ class DofManager
 
 **返回值:**
 - 自由度索引
+
+**异常:**
+- `std::out_of_range` - 当component超出范围时抛出
 
 ### size_t getNumDofs() const
 

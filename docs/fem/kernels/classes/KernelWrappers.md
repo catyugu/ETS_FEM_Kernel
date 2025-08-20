@@ -114,3 +114,10 @@ void HeatTransfer::addKernel(std::unique_ptr<KernelType> kernel) {
 1. [KernelWrapper](#kernelwrapper) 会自动检查单元节点数是否与内核匹配，不匹配的单元会被忽略
 2. 该机制支持混合网格，即同一物理场可以使用多种不同类型的单元
 3. 内核的所有权通过智能指针管理，确保内存安全
+
+## 依赖关系
+
+- [Kernel](Kernel.md) - 内核基类
+- [Element](../../mesh/classes/Element.md) - 单元数据结构
+- [DofManager](../../core/classes/DofManager.md) - 自由度管理器
+- Eigen - 稀疏矩阵运算库

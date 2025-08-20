@@ -41,9 +41,6 @@ void run_1d_heat_conduction_test() {
     // 8. **求解**线性系统
     problem->solve();
 
-    // 打印结果
-    problem->printResults();
-
     // --- 新增：在这里显式调用 Exporter ---
     Utils::Logger::instance().info("Exporting results to output.vtk...");
     FEM::IO::Exporter::write_vtk("output.vtk", *problem);
@@ -81,9 +78,6 @@ void run_1d_heat_conduction_test_cg() {
 
     // 8. **求解**线性系统
     problem->solve();
-
-    // 打印结果
-    problem->printResults();
 
     // --- 新增：在这里显式调用 Exporter ---
     Utils::Logger::instance().info("Exporting results to output_cg.vtk...");

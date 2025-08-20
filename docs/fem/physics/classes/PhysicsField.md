@@ -81,3 +81,9 @@ auto problem = std::make_unique<FEM::Problem<2>>(std::move(mesh), std::move(phys
 1. 所有具体的物理场类都必须继承自`PhysicsField`并实现所有纯虚函数
 2. `assemble`方法是有限元计算的核心，负责将局部单元矩阵组装成全局矩阵
 3. `getName`方法用于标识物理场类型，便于调试和日志记录
+
+## 依赖关系
+
+- [Mesh](../../mesh/classes/Mesh.md) - 网格类
+- [DofManager](../../core/classes/DofManager.md) - 自由度管理器
+- Eigen - 稀疏矩阵运算库
