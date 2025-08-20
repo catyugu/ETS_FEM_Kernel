@@ -5,6 +5,7 @@
 namespace FEM {
     // 新增：单元类型枚举
     enum class ElementType {
+        Point,
         Line,
         Triangle,
         Quadrilateral,
@@ -28,6 +29,13 @@ namespace FEM {
     private:
         int id_;
         std::vector<Node*> nodes_;
+    };
+
+    class PointElement : public Element {
+        public:
+            PointElement(int id, const std::vector<Node*>& nodes) : Element(id, nodes) {}
+            int getNumNodes() const override { return 1; }
+            ElementType getType() const override { return ElementType::Point; }
     };
 
     class LineElement : public Element {

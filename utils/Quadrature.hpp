@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <vector>
 #include <Eigen/Dense>
 #include <stdexcept>
@@ -29,16 +29,16 @@ namespace FEM::Utils {
             if (order == 1) {
                 // 1点积分规则，积分点位于三角形重心(1/3, 1/3)
                 return {
-                    {(Eigen::Vector2d() << 1.0/3.0, 1.0/3.0).finished(), 0.5}
+                    {(Eigen::Vector2d() << 1.0/3.0, 1.0/3.0).finished(), 1.0}
                 };
             } else if (order == 2) {
                 // 3点积分规则
                 double p1 = 1.0/6.0;
                 double p2 = 2.0/3.0;
                 return {
-                    {(Eigen::Vector2d() << p1, p1).finished(), 1.0/6.0},
-                    {(Eigen::Vector2d() << p2, p1).finished(), 1.0/6.0},
-                    {(Eigen::Vector2d() << p1, p2).finished(), 1.0/6.0}
+                    {(Eigen::Vector2d() << p1, p1).finished(), 1.0},
+                    {(Eigen::Vector2d() << p2, p1).finished(), 1.0},
+                    {(Eigen::Vector2d() << p1, p2).finished(), 1.0}
                 };
             }
             throw std::invalid_argument("Triangle quadrature order > 2 not implemented.");
@@ -60,14 +60,18 @@ namespace FEM::Utils {
 
         static std::vector<QuadraturePoint> getTetrahedronQuadrature(int order) {
             if (order == 1) {
-                double a = 0.58541020;
-                double b = 0.13819660;
-                double w = 1.0;  // 修改权重为1.0以与其他单元类型保持一致
                 return {
-                        {(Eigen::Vector3d() << a, b, b).finished(), w},
-                        {(Eigen::Vector3d() << b, a, b).finished(), w},
-                        {(Eigen::Vector3d() << b, b, a).finished(), w},
-                        {(Eigen::Vector3d() << b, b, b).finished(), w}
+                    {(Eigen::Vector3d() << 0.25, 0.25, 0.25).finished(), 1.0}
+                };
+            }
+            if (order == 2) {
+                double a = 0.5854101966249685;
+                double b = 0.1381966011250105;
+                return {
+                        {(Eigen::Vector3d() << a, b, b).finished(), 1.0},
+                        {(Eigen::Vector3d() << b, a, b).finished(), 1.0},
+                        {(Eigen::Vector3d() << b, b, a).finished(), 1.0},
+                        {(Eigen::Vector3d() << b, b, b).finished(), 1.0}
                 };
             }
             throw std::invalid_argument("Tetrahedron quadrature order > 1 not implemented.");

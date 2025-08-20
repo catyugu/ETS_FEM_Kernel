@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cmath>
 #include <limits>
+#include <io/Exporter.hpp>
 #include <kernels/HeatDiffusionKernel.hpp>
 #include <physics/HeatTransfer.hpp>
 #include <utils/Profiler.hpp>
@@ -215,6 +216,8 @@ TEST_F(TestHeatTransfer, SolveHeatTransferOnImportedMesh) {
         // 确保大部分节点都有有效解
         EXPECT_GT(matched_count, reference_nodes.size() * 0.95)
             << "Less than 95% of reference nodes were matched";
+
+        FEM::IO::Exporter::write_vtk("test_heat_transfer.vtk", *problem);
     }
     //  打印Profiler分析报告
     std::cout<<::Utils::Profiler::instance().getReport();
