@@ -34,6 +34,8 @@ namespace FEM {
             ReferenceElementData data;
             if (type == ElementType::Line) {
                 data.q_points = Utils::Quadrature::getLineQuadrature(order);
+            } else if (type == ElementType::Triangle) {
+                data.q_points = Utils::Quadrature::getTriangleQuadrature(order);
             } else if (type == ElementType::Quadrilateral) {
                 data.q_points = Utils::Quadrature::getQuadrilateralQuadrature(order);
             } else if (type == ElementType::Tetrahedron) {
@@ -48,6 +50,9 @@ namespace FEM {
                 if (type == ElementType::Line) {
                     Utils::ShapeFunctions::getLineShapeFunctions(order, qp.point(0), N);
                     Utils::ShapeFunctions::getLineShapeFunctionDerivatives(order, qp.point(0), dN_dxi);
+                } else if (type == ElementType::Triangle) {
+                    Utils::ShapeFunctions::getTriangleShapeFunctions(order, qp.point(0), qp.point(1), N);
+                    Utils::ShapeFunctions::getTriangleShapeFunctionDerivatives(order, qp.point(0), qp.point(1), dN_dxi);
                 } else if (type == ElementType::Quadrilateral) {
                     Utils::ShapeFunctions::getQuadShapeFunctions(order, qp.point(0), qp.point(1), N);
                     Utils::ShapeFunctions::getQuadShapeFunctionDerivatives(order, qp.point(0), qp.point(1), dN_dxi);
@@ -65,23 +70,5 @@ namespace FEM {
         }
         inline static std::map<std::pair<ElementType, int>, ReferenceElementData> cache_;
     };
-    
-    // 实现FiniteElement的create函数
-    inline std::unique_ptr<FiniteElement> FiniteElement::create(ElementType type, int order) {
-        switch (type) {
-            case ElementType::Line:
-                return std::make_unique<FiniteElementImpl<ElementType::Line, 2>>(order);
-            case ElementType::Triangle:
-                // TODO: 实现三角形单元
-                throw std::runtime_error("Triangle element not yet implemented");
-            case ElementType::Quadrilateral:
-                return std::make_unique<FiniteElementImpl<ElementType::Quadrilateral, 4>>(order);
-            case ElementType::Tetrahedron:
-                return std::make_unique<FiniteElementImpl<ElementType::Tetrahedron, 4>>(order);
-            case ElementType::Hexahedron:
-                return std::make_unique<FiniteElementImpl<ElementType::Hexahedron, 8>>(order);
-            default:
-                throw std::runtime_error("Unsupported element type");
-        }
-    }
+
 }

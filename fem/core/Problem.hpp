@@ -51,41 +51,51 @@ namespace FEM {
 
         void applyBCs() {
             PROFILE_FUNCTION();
+
+            if (dirichlet_bcs_.empty()) {
+                return;
+            }
+
+            // --- 步骤 1: 准备工作 ---
+            // 创建一个包含所有BC自由度的已排序向量，以便快速查找
             std::vector<int> bc_dofs;
+            bc_dofs.reserve(dirichlet_bcs_.size());
             for(const auto& bc : dirichlet_bcs_){
                 bc_dofs.push_back(bc.first);
             }
             std::sort(bc_dofs.begin(), bc_dofs.end());
 
             for (const auto& bc : dirichlet_bcs_) {
-                int dof_index = bc.first;
-                double value = bc.second;
-                
-                for (int j = 0; j < K_global_.rows(); ++j) {
-                    if (!std::binary_search(bc_dofs.begin(), bc_dofs.end(), j)) {
-                         F_global_(j) -= K_global_.coeff(j, dof_index) * value;
+                int dof_bc = bc.first;
+                double val_bc = bc.second;
+
+                for (Eigen::SparseMatrix<double>::InnerIterator it(K_global_, dof_bc); it; ++it) {
+                    int row_i = it.row();
+                    if (!std::binary_search(bc_dofs.begin(), bc_dofs.end(), row_i)) {
+                        F_global_(row_i) -= it.value() * val_bc;
+                    }
+                }
+            }
+
+            for (int dof_bc : bc_dofs) {
+                for (Eigen::SparseMatrix<double>::InnerIterator it(K_global_, dof_bc); it; ++it) {
+                    it.valueRef() = 0.0;
+                }
+                for (int k = 0; k < K_global_.outerSize(); ++k) {
+                    for (Eigen::SparseMatrix<double>::InnerIterator it(K_global_, k); it; ++it) {
+                        if (it.row() == dof_bc) {
+                            it.valueRef() = 0.0;
+                        }
                     }
                 }
             }
 
             for (const auto& bc : dirichlet_bcs_) {
-                int dof_index = bc.first;
-                double value = bc.second;
-
-                // 遍历矩阵的第k列
-                for (int k = 0; k < K_global_.outerSize(); ++k) {
-                    for (Eigen::SparseMatrix<double>::InnerIterator it(K_global_, k); it; ++it) {
-                        if (it.row() == dof_index || it.col() == dof_index) {
-                            it.valueRef() = 0.0;
-                        }
-                    }
-                }
-
-                K_global_.coeffRef(dof_index, dof_index) = 1.0;
-                F_global_(dof_index) = value;
+                K_global_.coeffRef(bc.first, bc.first) = 1.0;
+                F_global_(bc.first) = bc.second;
             }
-            
-            K_global_.makeCompressed();
+
+            K_global_.prune(0.0);
         }
 
         void solve() {

@@ -116,8 +116,7 @@ namespace FEM {
             if constexpr (TType == ElementType::Line) {
                 q_points_ = Utils::Quadrature::getLineQuadrature(order_);
             } else if constexpr (TType == ElementType::Triangle) {
-                // TODO: 实现三角形单元积分点
-                throw std::runtime_error("Triangle element not yet implemented");
+                q_points_ = Utils::Quadrature::getTriangleQuadrature(order_);
             } else if constexpr (TType == ElementType::Quadrilateral) {
                 q_points_ = Utils::Quadrature::getQuadrilateralQuadrature(order_);
             } else if constexpr (TType == ElementType::Tetrahedron) {
@@ -135,8 +134,8 @@ namespace FEM {
                     Utils::ShapeFunctions::getLineShapeFunctions(order_, qp.point(0), N);
                     Utils::ShapeFunctions::getLineShapeFunctionDerivatives(order_, qp.point(0), dN_dxi);
                 } else if constexpr (TType == ElementType::Triangle) {
-                    // TODO: 实现三角形单元形函数
-                    throw std::runtime_error("Triangle element not yet implemented");
+                    Utils::ShapeFunctions::getTriangleShapeFunctions(order_, qp.point(0), qp.point(1), N);
+                    Utils::ShapeFunctions::getTriangleShapeFunctionDerivatives(order_, qp.point(0), qp.point(1), dN_dxi);
                 } else if constexpr (TType == ElementType::Quadrilateral) {
                     Utils::ShapeFunctions::getQuadShapeFunctions(order_, qp.point(0), qp.point(1), N);
                     Utils::ShapeFunctions::getQuadShapeFunctionDerivatives(order_, qp.point(0), qp.point(1), dN_dxi);
@@ -165,8 +164,7 @@ namespace FEM {
             case ElementType::Line:
                 return std::make_unique<FiniteElementImpl<ElementType::Line, 2>>(order);
             case ElementType::Triangle:
-                // TODO: 实现三角形单元
-                throw std::runtime_error("Triangle element not yet implemented");
+                return std::make_unique<FiniteElementImpl<ElementType::Triangle, 3>>(order);
             case ElementType::Quadrilateral:
                 return std::make_unique<FiniteElementImpl<ElementType::Quadrilateral, 4>>(order);
             case ElementType::Tetrahedron:

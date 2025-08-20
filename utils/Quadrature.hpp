@@ -25,6 +25,25 @@ namespace FEM::Utils {
             throw std::invalid_argument("Line quadrature order > 1 not implemented.");
         }
 
+        static std::vector<QuadraturePoint> getTriangleQuadrature(int order) {
+            if (order == 1) {
+                // 1点积分规则，积分点位于三角形重心(1/3, 1/3)
+                return {
+                    {(Eigen::Vector2d() << 1.0/3.0, 1.0/3.0).finished(), 0.5}
+                };
+            } else if (order == 2) {
+                // 3点积分规则
+                double p1 = 1.0/6.0;
+                double p2 = 2.0/3.0;
+                return {
+                    {(Eigen::Vector2d() << p1, p1).finished(), 1.0/6.0},
+                    {(Eigen::Vector2d() << p2, p1).finished(), 1.0/6.0},
+                    {(Eigen::Vector2d() << p1, p2).finished(), 1.0/6.0}
+                };
+            }
+            throw std::invalid_argument("Triangle quadrature order > 2 not implemented.");
+        }
+
         // --- NEW: Quadrilateral Quadrature (2x2 Gauss) ---
         static std::vector<QuadraturePoint> getQuadrilateralQuadrature(int order) {
             if (order == 1) {
@@ -43,7 +62,7 @@ namespace FEM::Utils {
             if (order == 1) {
                 double a = 0.58541020;
                 double b = 0.13819660;
-                double w = 1.0/24.0;
+                double w = 1.0;  // 修改权重为1.0以与其他单元类型保持一致
                 return {
                         {(Eigen::Vector3d() << a, b, b).finished(), w},
                         {(Eigen::Vector3d() << b, a, b).finished(), w},

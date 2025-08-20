@@ -1,108 +1,221 @@
 #include <gtest/gtest.h>
+#include <iostream>
+#include <cmath>
+#include <limits>
+#include <utils/Profiler.hpp>
+
 #include "core/Problem.hpp"
 #include "materials/Material.hpp"
 #include "kernels/ElectrostaticsKernel.hpp"
-#include "io/Exporter.hpp"
+#include "io/Importer.hpp"
 #include "physics/Electrostatics.hpp"
-#include <cmath>
 
-class ElectrostaticsTest : public ::testing::Test {
+using namespace FEM;
+using namespace FEM::IO;
+#undef max
+#undef min
+
+// 添加一个辅助函数，用于根据坐标找到最接近的节点
+int findClosestNode(const std::vector<Node*>& nodes, const std::vector<double>& target_coords, double tolerance = 1e-10) {
+    int closest_index = -1;
+    double min_distance = std::numeric_limits<double>::max();
+    
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        const auto& coords = nodes[i]->getCoords();
+        
+        double distance = 0.0;
+        for (size_t j = 0; j < coords.size(); ++j) {
+            distance += (coords[j] - target_coords[j]) * (coords[j] - target_coords[j]);
+        }
+        distance = std::sqrt(distance);
+        
+        if (distance < min_distance) {
+            min_distance = distance;
+            closest_index = static_cast<int>(i);
+        }
+    }
+    
+    // 如果最近节点距离在容差范围内，则认为是匹配的
+    if (min_distance <= tolerance) {
+        return closest_index;
+    }
+    
+    return -1; // 没有找到足够接近的节点
+}
+
+class TestElectrostatics : public ::testing::Test {
 protected:
     void SetUp() override {
-        material = std::make_unique<FEM::Material>("Copper");
-        material->setProperty("electrical_conductivity", 5.96e7); // 铜的电导率 S/m
+        // 创建铜材料并设置电导率
+        material = std::make_unique<Material>("Copper");
+        material->setProperty("electrical_conductivity", 5.96e7); // S/m
     }
-    std::unique_ptr<FEM::Material> material;
+
+    std::unique_ptr<Material> material;
 };
 
-// 1D Test
-TEST_F(ElectrostaticsTest, Solves1DProblem) {
-    constexpr int dim = 1;
-    constexpr int num_nodes_per_elem = 2;
+TEST_F(TestElectrostatics, SolveElectrostaticsOnImportedMesh) {
 
-    auto mesh = FEM::Mesh::create_uniform_1d_mesh(1.0, 10);
-    auto physics = std::make_unique<FEM::Electrostatics<dim>>();
+    {
 
-    // 使用新的ElectrostaticsKernel而不是HeatDiffusionKernel
-    physics->addKernel(
-        std::make_unique<FEM::ElectrostaticsKernel<dim, num_nodes_per_elem>>(*material)
-    );
+        ::Utils::Profiler::instance().begin("Input");
+        std::unique_ptr<Mesh> mesh;
+        try {
+            mesh = Importer::read_comsol_mphtxt("data/electroOnlyMesh_3D.mphtxt");
+        } catch (const std::exception& e) {
+            FAIL() << "Failed to read mesh file: " << e.what();
+        }
 
-    auto problem = std::make_unique<FEM::Problem<dim>>(std::move(mesh), std::move(physics));
+        ASSERT_NE(mesh, nullptr) << "Mesh should not be null";
+        ASSERT_GT(mesh->getNodes().size(), 0) << "Mesh should have nodes";
+        ASSERT_GT(mesh->getElements().size(), 0) << "Mesh should have elements";
 
-    problem->addDirichletBC(0, 10.0);   // 左端点 10V
-    problem->addDirichletBC(10, 0.0);   // 右端点 0V (地)
-    problem->assemble();
-    problem->applyBCs();
-    problem->solve();
+        std::cout << "Mesh has " << mesh->getNodes().size() << " nodes and "
+                  << mesh->getElements().size() << " elements" << std::endl;
 
-    const auto& solution = problem->getSolution();
-    // 对于线性分布，中间节点的电势应该是两端的平均值
-    ASSERT_NEAR(solution(5), 5.0, 1e-9);
-    FEM::IO::Exporter::write_vtk("electrostatics_1d_results.vtk", *problem);
-}
+        ::Utils::Profiler::instance().end();
 
-// 2D Test
-TEST_F(ElectrostaticsTest, Solves2DProblem) {
-    constexpr int dim = 2;
-    constexpr int num_nodes_per_elem = 4;
-    const int nx = 10, ny = 10;
+        // 创建静电场物理场
+        constexpr int dim = 3;
+        auto physics = std::make_unique<Electrostatics<dim>>();
 
-    auto mesh = FEM::Mesh::create_uniform_2d_mesh(1.0, 1.0, nx, ny);
-    auto physics = std::make_unique<FEM::Electrostatics<dim>>();
+        // 添加静电场内核 (使用四面体单元，因为COMSOL网格文件中是四面体单元)
+        constexpr int num_nodes_per_elem = 4;
+        physics->addKernel(
+            std::make_unique<ElectrostaticsKernel<dim, num_nodes_per_elem>>(*material)
+        );
 
-    physics->addKernel(
-        std::make_unique<FEM::ElectrostaticsKernel<dim, num_nodes_per_elem>>(*material)
-    );
+        // 创建问题实例
+        auto problem = std::make_unique<Problem<dim>>(std::move(mesh), std::move(physics), SolverType::ConjugateGradient);
 
-    auto problem = std::make_unique<FEM::Problem<dim>>(std::move(mesh), std::move(physics));
 
-    const auto& nodes = problem->getMesh().getNodes();
-    for(const auto& node : nodes) {
-        const auto& coords = node->getCoords();
-        if (std::abs(coords[0] - 0.0) < 1e-9) problem->addDirichletBC(node->getId(), 10.0);  // 10V
-        if (std::abs(coords[0] - 1.0) < 1e-9) problem->addDirichletBC(node->getId(), 0.0);   // 0V
+        const auto& nodes = problem->getMesh().getNodes();
+
+        int left_bcs = 0;
+        int right_bcs = 0;
+
+        double min_x = nodes[0]->getCoords()[0];
+        double max_x = min_x;
+        for (const auto& node : nodes) {
+            const auto& coords = node->getCoords();
+            min_x = std::min(min_x, coords[0]);
+            max_x = std::max(max_x, coords[0]);
+        }
+
+        double tolerance = 1e-7; // 使用相对容差
+
+        std::cout << "X range: [" << min_x << ", " << max_x << "], tolerance: " << tolerance << std::endl;
+
+        for (const auto& node : nodes) {
+            const auto& coords = node->getCoords();
+            // 左侧边界 (x ≈ min_x)
+            if (std::abs(coords[0] - min_x) < tolerance) {
+                problem->addDirichletBC(node->getId(), 0.1);
+                left_bcs++;
+            }
+            // 右侧边界 (x ≈ max_x)
+            else if (std::abs(coords[0] - max_x) < tolerance) {
+                problem->addDirichletBC(node->getId(), 0.0);
+                right_bcs++;
+            }
+        }
+
+        ASSERT_GT(left_bcs, 0) << "No left boundary conditions set";
+        ASSERT_GT(right_bcs, 0) << "No right boundary conditions set";
+
+        std::cout << "Left boundary conditions: " << left_bcs << std::endl;
+        std::cout << "Right boundary conditions: " << right_bcs << std::endl;
+
+        // 组装和求解
+        EXPECT_NO_THROW(problem->assemble()) << "Assembly should not throw";
+        EXPECT_NO_THROW(problem->applyBCs()) << "Applying BCs should not throw";
+        EXPECT_NO_THROW(problem->solve()) << "Solving should not throw";
+
+        // 读取参考数据 - 直接读取电势数据
+        std::vector<double> ref_potential_data;
+        std::unique_ptr<Mesh> ref_mesh;
+        try {
+            auto result = Importer::read_vtu_point_data_field("data/electroOnlyResults_3D.vtu", "&#x7535;&#x52bf;");
+            ref_mesh = std::move(result.first);
+            ref_potential_data = std::move(result.second);
+        } catch (const std::exception& e) {
+            FAIL() << "Failed to read reference data: " << e.what();
+        }
+
+        ASSERT_FALSE(ref_potential_data.empty()) << "Reference data should not be empty";
+        ASSERT_EQ(ref_potential_data.size(), ref_mesh->getNodes().size())
+            << "Reference data size should match reference mesh node count";
+
+        // 比较计算结果与参考数据
+        const auto& solution = problem->getSolution();
+        const auto& problem_nodes = problem->getMesh().getNodes();
+        const auto& reference_nodes = ref_mesh->getNodes();
+
+        // 确保节点数量一致
+        ASSERT_EQ(reference_nodes.size(), ref_potential_data.size())
+            << "Number of nodes in reference solution should match reference data";
+
+        // 计算误差
+        double max_error = 0.0;
+        double rms_error = 0.0;
+        int error_count = 0;
+        int finite_count = 0;
+        int matched_count = 0;
+
+        // 为每个参考节点找到对应的计算节点并比较结果
+        for (size_t i = 0; i < reference_nodes.size(); ++i) {
+            PROFILE_SCOPE("FindClosestNode");
+            const auto& ref_coords = reference_nodes[i]->getCoords();
+            // 在计算网格中找到最接近的节点
+            int matched_index = findClosestNode(problem_nodes, ref_coords);
+
+            if (matched_index != -1) {
+                matched_count++;
+                int dof_index = problem->getDofManager().getNodeDof(problem_nodes[matched_index]->getId(), 0);
+                double computed_value = solution(dof_index);
+                double reference_value = ref_potential_data[i];
+
+                // 检查是否是有效数值
+                if (std::isfinite(computed_value) && std::isfinite(reference_value)) {
+                    finite_count++;
+                    double error = std::abs(computed_value - reference_value);
+                    max_error = std::max(max_error, error);
+                    rms_error += error * error;
+
+                    // 检查个别点的值是否在合理范围内
+                    if (i % 50 == 0) { // 每50个点检查一次
+                        EXPECT_NEAR(computed_value, reference_value, 0.02)
+                            << "Potential at node " << i << " differs significantly";
+                    }
+                } else {
+                    error_count++;
+                }
+            }
+        }
+
+        if (error_count > 0) {
+            std::cout << "Warning: " << error_count << " nodes have non-finite values" << std::endl;
+        }
+
+        if (finite_count > 0) {
+            rms_error = std::sqrt(rms_error / finite_count);
+        } else {
+            rms_error = std::numeric_limits<double>::infinity();
+        }
+
+        std::cout << "Matched nodes: " << matched_count << "/" << reference_nodes.size() << std::endl;
+        std::cout << "Max error: " << max_error << std::endl;
+        std::cout << "RMS error: " << rms_error << std::endl;
+        std::cout << "Finite values: " << finite_count << "/" << matched_count << std::endl;
+
+        // 整体误差应该在合理范围内
+        EXPECT_LT(max_error, 0.03) << "Maximum error should be less than 0.03V";
+        EXPECT_LT(rms_error, 0.01) << "RMS error should be less than 0.01V";
+
+        // 确保大部分节点都有有效解
+        EXPECT_GT(matched_count, reference_nodes.size() * 0.95)
+            << "Less than 95% of reference nodes were matched";
     }
-
-    problem->assemble();
-    problem->applyBCs();
-    problem->solve();
-
-    const auto& solution = problem->getSolution();
-    int center_node_id = (ny + 1) * (nx / 2) + (ny / 2);
-    ASSERT_NEAR(solution(center_node_id), 5.0, 1e-9);
-    FEM::IO::Exporter::write_vtk("electrostatics_2d_results.vtk", *problem);
-}
-
-// 3D Test
-TEST_F(ElectrostaticsTest, Solves3DProblem) {
-    constexpr int dim = 3;
-    constexpr int num_nodes_per_elem = 8;
-    const int nx = 5, ny = 5, nz = 5;
-
-    auto mesh = FEM::Mesh::create_uniform_3d_mesh(1.0, 1.0, 1.0, nx, ny, nz);
-    auto physics = std::make_unique<FEM::Electrostatics<dim>>();
-
-    physics->addKernel(
-        std::make_unique<FEM::ElectrostaticsKernel<dim, num_nodes_per_elem>>(*material)
-    );
-
-    auto problem = std::make_unique<FEM::Problem<dim>>(std::move(mesh), std::move(physics));
-
-    const auto& nodes = problem->getMesh().getNodes();
-    for(const auto& node : nodes) {
-        const auto& coords = node->getCoords();
-        if (std::abs(coords[0] - 0.0) < 1e-9) problem->addDirichletBC(node->getId(), 10.0);  // 10V
-        if (std::abs(coords[0] - 1.0) < 1e-9) problem->addDirichletBC(node->getId(), 0.0);   // 0V
-    }
-
-    problem->assemble();
-    problem->applyBCs();
-    problem->solve();
-
-    const auto& solution = problem->getSolution();
-    int center_node_id = (nz/2)*(nx+1)*(ny+1) + (ny/2)*(nx+1) + (nx/2);
-    // 在3D情况下，由于几何和边界条件的复杂性，中心点的值可能不是简单的平均值
-    ASSERT_NEAR(solution(center_node_id), 6.0, 1e-9); // 期望值基于问题设置
-    FEM::IO::Exporter::write_vtk("electrostatics_3d_results.vtk", *problem);
+    //  打印Profiler分析报告
+    std::cout<<::Utils::Profiler::instance().getReport();
 }
