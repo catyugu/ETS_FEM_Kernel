@@ -30,8 +30,6 @@ namespace FEM {
         std::vector<Node*> nodes_;
     };
 
-    // --- 在每个单元子类中实现 getType() ---
-
     class LineElement : public Element {
     public:
         LineElement(int id, const std::vector<Node*>& nodes) : Element(id, nodes) {}
@@ -51,6 +49,13 @@ namespace FEM {
         QuadElement(int id, const std::vector<Node*>& nodes) : Element(id, nodes) {}
         int getNumNodes() const override { return 4; }
         ElementType getType() const override { return ElementType::Quadrilateral; }
+    };
+
+    class TetraElement : public Element {
+    public:
+        TetraElement(int id, const std::vector<Node*>& nodes) : Element(id, nodes) {}
+        int getNumNodes() const override { return 4; }
+        ElementType getType() const override { return ElementType::Tetrahedron; }
     };
 
     class HexaElement : public Element {
