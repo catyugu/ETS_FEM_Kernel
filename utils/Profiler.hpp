@@ -118,7 +118,7 @@ namespace Utils {
 } // namespace Utils
 
 // 方便使用的宏定义
-#define PROFILE_FUNCTION() Utils::ProfileScope profile_scope_##__LINE__(__FUNCTION__)
-#define PROFILE_SCOPE(name) Utils::ProfileScope profile_scope_##__LINE__(name)
+#define PROFILE_FUNCTION() ::Utils::ProfileScope profile_scope_##__LINE__(__FUNCTION__)
+#define PROFILE_SCOPE(name) ::Utils::ProfileScope profile_scope_##__LINE__(name)
 
 #endif // PROFILER_HPP

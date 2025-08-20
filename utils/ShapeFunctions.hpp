@@ -31,7 +31,30 @@ namespace FEM::Utils {
             } else throw std::invalid_argument("Quad shape function derivative order > 1 not implemented.");
         }
 
-        // --- 3D Hex (NEW) ---
+        // --- 3D Tetrahedron (NEW) ---
+        static void getTetShapeFunctions(int order, double xi, double eta, double zeta, Eigen::VectorXd& N) {
+            if (order == 1) {
+                N.resize(4);
+                // 四面体的四个节点形函数
+                N << 1.0 - xi - eta - zeta,  // 第一个节点 (1,0,0)
+                     xi,                     // 第二个节点 (0,1,0)
+                     eta,                    // 第三个节点 (0,0,1)
+                     zeta;                   // 第四个节点 (0,0,0)
+            } else throw std::invalid_argument("Tet shape function order > 1 not implemented.");
+        }
+
+        static void getTetShapeFunctionDerivatives(int order, double xi, double eta, double zeta, Eigen::MatrixXd& dN_dxi) {
+            if (order == 1) {
+                dN_dxi.resize(3, 4);
+                // d/dxi
+                dN_dxi.row(0) << -1.0, 1.0, 0.0, 0.0;
+                // d/deta
+                dN_dxi.row(1) << -1.0, 0.0, 1.0, 0.0;
+                // d/dzeta
+                dN_dxi.row(2) << -1.0, 0.0, 0.0, 1.0;
+            } else throw std::invalid_argument("Tet shape function derivative order > 1 not implemented.");
+        }
+
         static void getHexShapeFunctions(int order, double xi, double eta, double zeta, Eigen::VectorXd& N) {
             if (order == 1) {
                 N.resize(8);
