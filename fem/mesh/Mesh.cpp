@@ -35,6 +35,11 @@ namespace FEM {
         for (int i = 0; i < num_elements; ++i) {
             mesh->addElement(new LineElement(i, {mesh->getNodeById(i), mesh->getNodeById(i + 1)}));
         }
+        
+        // 添加边界信息
+        mesh->addBoundaryNode("left_end", 0);
+        mesh->addBoundaryNode("right_end", num_elements);
+        
         return mesh;
     }
 
@@ -63,6 +68,11 @@ namespace FEM {
                 }));
             }
         }
+        
+        // 添加边界信息（简化处理）
+        mesh->addBoundaryNode("left_end", 0);
+        mesh->addBoundaryNode("right_end", nx);
+        
         return mesh;
     }
 
@@ -102,6 +112,11 @@ namespace FEM {
                 }
             }
         }
+        
+        // 添加边界信息（简化处理）
+        mesh->addBoundaryNode("left_end", 0);
+        mesh->addBoundaryNode("right_end", nx);
+        
         return mesh;
     }
 

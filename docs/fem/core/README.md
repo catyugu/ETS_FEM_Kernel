@@ -1,29 +1,36 @@
-# fem::core 命名空间
+# FEM::Core Namespace
 
-fem::core 命名空间包含了有限元计算的核心类和功能，负责管理自由度、计算有限元值、求解线性方程组等核心计算任务。
-
-## 类列表
-
-- [AnalysisType](classes/AnalysisTypes.md)
-- [DofManager](classes/DofManager.md) - 自由度管理器
-- [FEValues](classes/FEValues.md) - 有限元值计算器
-- [FiniteElement](classes/FiniteElement.md) - 有限单元类
-- [LinearSolver](classes/LinearSolver.md) - 线性求解器
-- [Problem](classes/Problem.md) - 问题定义基类
-- [ReferenceElement](classes/ReferenceElement.md) - 参考单元类
+核心有限元功能命名空间，包含有限元方法的基础组件。
 
 ## 概述
 
-fem::core 命名空间提供了有限元方法的核心计算功能。这些类负责处理有限元分析中最基本的操作，包括自由度的管理、有限元值的计算、线性系统的构建和求解等。
+Core命名空间提供了有限元方法的核心功能组件，包括自由度管理、有限元值计算、线性求解器接口等。
 
-最新更新增加了对稀疏模式预计算的支持，以提高矩阵组装的性能，以及对多种求解器类型的支持。
+## 类列表
 
-新增的 [FiniteElement](classes/FiniteElement.md) 类提供了更加模块化和可扩展的单元处理方式，用于替代原有的 [ReferenceElement](classes/ReferenceElement.md) 直接使用方式。
+### 基础类
+- [DofManager](classes/DofManager.md) - 自由度管理器
+- [FiniteElement](classes/FiniteElement.md) - 有限元基类
+- [ReferenceElement](classes/ReferenceElement.md) - 参考单元
+- [FEValues](classes/FEValues.md) - 有限元值计算
+- [FEFaceValues](classes/FEFaceValues.md) - 面单元值计算
+- [BoundaryCondition](classes/BoundaryCondition.md) - 边界条件基类
 
-[DofManager](classes/DofManager.md) 类现在支持多种自由度类型（节点、边、面、体），为使用边缘元等高级单元类型提供了支持。
+### 求解器相关
+- [LinearSolver](classes/LinearSolver.md) - 线性求解器接口
+- [Problem](classes/Problem.md) - 问题类
+
+### 枚举类型
+- AnalysisType - 分析类型枚举
+
+## 设计原则
+
+1. **模块化**：每个类都有明确的职责
+2. **可扩展性**：支持多物理场耦合
+3. **高效性**：利用Eigen库进行高效矩阵运算
+4. **接口一致性**：提供统一的API接口
 
 ## 依赖关系
 
-- Eigen 3.4.0 - 矩阵运算库
-- fem::mesh - 网格数据结构
-- utils - 工具函数，如形函数和积分点
+- Eigen 3.4.0：矩阵运算库
+- Utils命名空间：工具类支持

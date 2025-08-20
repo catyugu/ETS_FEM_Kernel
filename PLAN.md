@@ -1,88 +1,487 @@
-### 1\. 已完成的优化工作
 
-以下是我们已经完成的优化工作：
+### **重构目标**
 
-* **稀疏矩阵预分配 (Sparsity Pattern Pre-computation)**
+将目前硬编码在 `Problem` 类中的边界条件逻辑，重构为一个通用的、面向对象的边界条件框架。此框架将统一处理狄利克雷（Dirichlet）、诺伊曼（Neumann）和柯西（Cauchy）边界条件，提高代码的可扩展性和可维护性。
 
-    * **工作内容**: 在正式组装数值之前，先遍历一次网格，仅确定矩阵的**稀疏模式**（即哪些位置会有非零值），并一次性为 `K_global` 分配好内存。之后在组装循环中，我们只向这些已分配好的位置填入数值。
-    * **实现细节**:
-        1.  在 `DofManager` 中添加了一个 `computeSparsityPattern` 方法，它会生成一个包含所有非零项 `(row, col)` 的列表。
-        2.  在 `Problem` 中，调用 `K_global.reserve(sparsity_pattern)` 来预分配内存。
+### **核心设计思想**
 
-* **添加物理场抽象(PhysicsField)**
+1.  **抽象化**：创建一个通用的 `BoundaryCondition` 基类，所有具体边界条件都继承自它。
+2.  **权责分离**：
+    * `PhysicsField` 类负责**持有和管理**与其相关的边界条件集合。
+    * `Mesh` 类负责提供**几何信息**，例如根据名称查询边界上的节点或单元。
+    * `Problem` 类作为**协调器**，负责触发组装流程和在求解前统一施加狄利克雷约束。
+3.  **统一接口**：所有边界条件都通过 `PhysicsField` 的 `addBoundaryCondition` 方法添加，使得用户代码（如 `main.cpp`）更加简洁和一致。
 
-    * **工作内容**: 引入了一个通用的 `PhysicsField` 抽象类，所有具体的物理场（如热传导、电场等）都继承自它。这使得问题定义更加灵活，便于未来扩展。
-    * **实现细节**:
-        1.  创建了一个 `PhysicsField` 基类，定义了通用接口。
-        2.  修改了 `HeatTransfer` 类，使其继承自 `PhysicsField`。
-        3.  在 `Problem` 中持有一个 `std::unique_ptr<PhysicsField>`，并在组装和求解时调用其方法。
+-----
 
-* **实现电场求解**
+### **重构执行步骤**
 
-    * **工作内容**: 添加了一个 `Electrostatics` 物理场，用于求解电场问题，并创建了相应的 `ElectrostaticsKernel` 计算内核。
-    * **实现细节**:
-        1.  创建了一个新的物理场类 `Electrostatics`，它继承自 `PhysicsField`。
-        2.  实现了 `ElectrostaticsKernel` 计算内核，用于计算电势分布。
+#### **第 1 步：创建新的目录和文件**
 
-* **迭代求解器支持**
+1.  在 `fem` 目录下创建一个新目录 `bcs`，用于存放所有具体的边界条件实现。
+2.  **创建新文件** `fem/core/BoundaryCondition.hpp`：定义边界条件基类。
+3.  **创建新文件** `fem/bcs/DirichletBC.hpp`：定义狄利克雷边界条件。
+4.  **创建新文件** `fem/bcs/NeumannBC.hpp`：定义诺伊曼边界条件。
+5.  **创建新文件** `fem/bcs/CauchyBC.hpp`：定义柯西边界条件。
 
-    * **工作内容**: 集成了更适合大规模稀疏系统的**迭代求解器**（如共轭梯度法 `ConjugateGradient`），并保留了原有的稀疏LU直接求解器，用户可根据需要选择求解器类型。
+#### **第 2 步：填充新文件内容**
 
-### 2\. 性能优化：榨干硬件的每一分潜力
+##### **2.1 `fem/core/BoundaryCondition.hpp`**
 
-有限元计算的核心瓶颈在于单元的遍历和组装。这是我们下一步优化的重中之重。
+```cpp
+#pragma once
 
-* **并行计算 (Multi-threading)**
+#include <Eigen/Sparse>
+#include <string>
+#include <vector>
+#include "../mesh/Mesh.hpp"
+#include "DofManager.hpp"
 
-    * **现状**: 当前的 `assemble` 函数是单线程的，它按顺序遍历所有单元。
-    * **优化方向**: 单元组装过程是一个典型的"易并行"任务，因为每个单元的计算是相互独立的。我们可以使用 **OpenMP** 来并行化这个循环。这在多核CPU上会带来近乎线性的性能提升。
-    * **实现思路**:
-      ```cpp
-      // In HeatTransfer::assemble
-      // #pragma omp parallel for
-      for (const auto& elem : mesh.getElements()) {
-          // ... 组装单个单元的局部矩阵 ...
-          // 注意：向全局矩阵 K_global_ 写入时需要使用原子操作或线程安全的稀疏矩阵格式
-      }
-      ```
-      Eigen的某些版本结合特定的编译器可以直接支持并行化的矩阵操作，但最稳健的方式是为每个线程创建一个局部的矩阵块，在并行循环结束后再统一合并到全局矩阵中。
+namespace FEM {
 
-* **添加逐单元计算(EBE)配合迭代法求解的选项**
-    * **现状**: 当前的求解器是直接求解全局线性系统或使用全局组装矩阵求解。
-    * **优化方向**: 对于大规模问题，逐单元计算（Element-by-Element）配合迭代法（如共轭梯度法）可以显著减少内存使用和计算时间。
-    * **实现思路**: 在 `LinearSolver` 中添加一个选项，允许用户选择逐单元组装并使用迭代求解器。
+    // 边界条件类型的枚举
+    enum class BCType {
+        Dirichlet,
+        Neumann,
+        Cauchy
+    };
 
-### 3\. 架构优化：追求极致的通用性与可扩展性
+    // 边界条件抽象基类
+    template<int TDim>
+    class BoundaryCondition {
+    public:
+        virtual ~BoundaryCondition() = default;
 
-商业级内核的强大之处在于其能够灵活地应对各种复杂的物理问题。
+        // 应用边界条件。对于Neumann和Cauchy，此方法会修改K和F。
+        // 对于Dirichlet，此方法为空，因为它的应用逻辑是特殊的。
+        virtual void apply(const Mesh& mesh, const DofManager& dof_manager,
+                           Eigen::SparseMatrix<double>& K_global, Eigen::VectorXd& F_global) const = 0;
+                           
+        virtual BCType getType() const = 0;
+        
+        const std::string& getBoundaryName() const { return boundary_name_; }
 
-* **多物理场耦合框架**
+    protected:
+        BoundaryCondition(const std::string& boundary_name) : boundary_name_(boundary_name) {}
+        std::string boundary_name_;
+    };
+}
+```
 
-    * **现状**: 我们的 `Problem` 只能处理单一的物理场（热传导或静电场）。
-    * **优化方向**: 为真正的热电耦合做准备，需要一个能够管理多个物理场（`PhysicsField`）并定义它们之间相互作用的框架。
-    * **实现思路**:
-        1.  让 `Problem` 持有一个 `std::vector<PhysicsField>`。
-        2.  引入 `CouplingManager`，它负责执行场间的数据传递。例如，在每个非线性迭代步或时间步结束后，由 `CouplingManager` 调用一个 `ElectroThermalCoupling` 对象，该对象会：
-            * 从电场计算出焦耳热。
-            * 将焦耳热作为热源项施加到热传导方程的右端项 `F` 中。
+##### **2.2 `fem/bcs/DirichletBC.hpp`**
 
-* **支持更复杂的物理场**
+```cpp
+#pragma once
 
-    * **现状**: 我们目前只能处理标量问题（热传导和静电场）。
-    * **优化方向**: 添加对向量问题（如弹性力学、流体力学）的支持，扩展内核系统以支持更复杂的物理现象。
+#include "../core/BoundaryCondition.hpp"
 
-### 4\. 数值与求解器优化
+namespace FEM {
+    template<int TDim>
+    class DirichletBC : public BoundaryCondition<TDim> {
+    public:
+        DirichletBC(const std::string& boundary_name, double value)
+            : BoundaryCondition<TDim>(boundary_name), value_(value) {}
 
-* **预条件子支持 (Preconditioners)**
+        // 留空，由 Problem 类统一处理
+        void apply(const Mesh& mesh, const DofManager& dof_manager,
+                   Eigen::SparseMatrix<double>& K_global, Eigen::VectorXd& F_global) const override {}
+        
+        BCType getType() const override { return BCType::Dirichlet; }
 
-    * **现状**: 迭代求解器（如共轭梯度法）在某些问题上收敛较慢。
-    * **优化方向**: 为迭代求解器集成强大的**预条件子**（如不完全Cholesky分解 `IncompleteCholesky` 或代数多重网格 `Algebraic Multigrid`）以提高收敛速度。
-    * **实现思路**: 扩展 `LinearSolver`，使其支持各种预条件子选项。
+        double getValue() const { return value_; }
 
-* **支持高阶单元 (Higher-Order Elements)**
+    private:
+        double value_;
+    };
+}
+```
 
-    * **现状**: 我们的 `ShapeFunctions` 和 `Quadrature` 只实现了一阶（线性）单元。
-    * **优化方向**: 扩展这两个工具类，加入对二阶（二次）单元的支持。高阶单元能用更少的网格数量达到更高的计算精度。
-    * **实现思路**: 在 `ShapeFunctions` 和 `Quadrature` 中添加 `order == 2` 的逻辑分支，并更新 `ReferenceElement` 以缓存这些高阶数据。
+##### **2.3 `fem/bcs/NeumannBC.hpp`**
 
-通过在以上几个方向进行深度优化，您的FEM内核将不仅在性能上获得巨大飞跃，更能在架构的通用性和可扩展性上达到商业级软件的水准，为未来解决复杂的多物理场耦合问题打下坚实的基础。
+```cpp
+#pragma once
+
+#include "../core/BoundaryCondition.hpp"
+#include "../core/FEValues.hpp" // 假设 FEFaceValues 在此或相关文件中定义
+
+namespace FEM {
+    template<int TDim>
+    class NeumannBC : public BoundaryCondition<TDim> {
+    public:
+        NeumannBC(const std::string& boundary_name, double value)
+            : BoundaryCondition<TDim>(boundary_name), value_(value) {}
+
+        void apply(const Mesh& mesh, const DofManager& dof_manager,
+                   Eigen::SparseMatrix<double>& K_global, Eigen::VectorXd& F_global) const override {
+            
+            const auto& boundary_elements = mesh.getBoundaryElements(this->boundary_name_);
+
+            for (const auto& elem_ptr : boundary_elements) {
+                const Element& face_element = *elem_ptr;
+                FEFaceValues fe_face_values(face_element, 1, AnalysisType::SCALAR_DIFFUSION);
+                Eigen::VectorXd F_elem_bc = Eigen::VectorXd::Zero(face_element.getNumNodes());
+
+                for (size_t q = 0; q < fe_face_values.n_quad_points(); ++q) {
+                    fe_face_values.reinit(q);
+                    const auto& N = fe_face_values.N();
+                    F_elem_bc += N * value_ * fe_face_values.JxW();
+                }
+                
+                std::vector<int> dofs(face_element.getNumNodes());
+                for (size_t i = 0; i < face_element.getNumNodes(); ++i) {
+                    dofs[i] = dof_manager.getNodeDof(face_element.getNodeId(i), 0);
+                }
+
+                for (size_t i = 0; i < face_element.getNumNodes(); ++i) {
+                    F_global(dofs[i]) += F_elem_bc(i);
+                }
+            }
+        }
+        
+        BCType getType() const override { return BCType::Neumann; }
+
+    private:
+        double value_;
+    };
+}
+```
+
+***注意***: `NeumannBC` 和 `CauchyBC` 的实现依赖于一个 `FEFaceValues` 类，该类专门用于在 TDim-1 维度的边界单元上进行积分。你需要自行实现这个类，其功能与现有的 `FEValues` 类似。
+
+##### **2.4 `fem/bcs/CauchyBC.hpp`**
+
+```cpp
+#pragma once
+
+#include "../core/BoundaryCondition.hpp"
+#include "../core/FEValues.hpp"
+
+namespace FEM {
+    template<int TDim>
+    class CauchyBC : public BoundaryCondition<TDim> {
+    public:
+        CauchyBC(const std::string& boundary_name, double h_val, double T_inf_val)
+            : BoundaryCondition<TDim>(boundary_name), h_(h_val), T_inf_(T_inf_val) {}
+
+        void apply(const Mesh& mesh, const DofManager& dof_manager,
+                   Eigen::SparseMatrix<double>& K_global, Eigen::VectorXd& F_global) const override {
+            
+            const auto& boundary_elements = mesh.getBoundaryElements(this->boundary_name_);
+
+            for (const auto& elem_ptr : boundary_elements) {
+                const Element& face_element = *elem_ptr;
+                FEFaceValues fe_face_values(face_element, 1, AnalysisType::SCALAR_DIFFUSION);
+
+                Eigen::MatrixXd K_elem_bc = Eigen::MatrixXd::Zero(face_element.getNumNodes(), face_element.getNumNodes());
+                Eigen::VectorXd F_elem_bc = Eigen::VectorXd::Zero(face_element.getNumNodes());
+
+                for (size_t q = 0; q < fe_face_values.n_quad_points(); ++q) {
+                    fe_face_values.reinit(q);
+                    const auto& N = fe_face_values.N();
+                    K_elem_bc += h_ * N * N.transpose() * fe_face_values.JxW();
+                    F_elem_bc += h_ * T_inf_ * N * fe_face_values.JxW();
+                }
+
+                std::vector<int> dofs(face_element.getNumNodes());
+                for (size_t i = 0; i < face_element.getNumNodes(); ++i) {
+                    dofs[i] = dof_manager.getNodeDof(face_element.getNodeId(i), 0);
+                }
+
+                for (size_t i = 0; i < face_element.getNumNodes(); ++i) {
+                    F_global(dofs[i]) += F_elem_bc(i);
+                    for (size_t j = 0; j < face_element.getNumNodes(); ++j) {
+                        K_global.coeffRef(dofs[i], dofs[j]) += K_elem_bc(i, j);
+                    }
+                }
+            }
+        }
+        
+        BCType getType() const override { return BCType::Cauchy; }
+
+    private:
+        double h_;
+        double T_inf_;
+    };
+}
+```
+
+#### **第 3 步：修改现有核心类**
+
+##### **3.1 修改 `fem/mesh/Mesh.hpp`**
+
+为 `Mesh` 类添加存储和查询命名边界的功能。
+
+```cpp
+// 在 Mesh.hpp 中
+#include <map>
+#include <string>
+#include <vector>
+#include <set> // 新增
+#include <memory> // 确保包含
+
+// ...
+
+class Mesh {
+    // ...
+private:
+    // ...
+    // key 是边界名称, value 是构成该边界的单元列表
+    std::map<std::string, std::vector<std::unique_ptr<Element>>> boundary_elements_;
+
+public:
+    // ... (现有方法)
+
+    // 在网格导入时调用此方法来添加命名的边界单元
+    void addBoundaryElement(const std::string& boundary_name, std::unique_ptr<Element> element) {
+        boundary_elements_[boundary_name].push_back(std::move(element));
+    }
+
+    // 获取指定名称的边界单元集合
+    const std::vector<std::unique_ptr<Element>>& getBoundaryElements(const std::string& boundary_name) const {
+        auto it = boundary_elements_.find(boundary_name);
+        if (it == boundary_elements_.end()) {
+            throw std::runtime_error("Boundary with name '" + boundary_name + "' not found.");
+        }
+        return it->second;
+    }
+
+    // 获取指定名称边界上的所有唯一节点ID
+    std::vector<int> getBoundaryNodes(const std::string& boundary_name) const {
+        std::vector<int> node_ids;
+        const auto& b_elements = getBoundaryElements(boundary_name);
+        
+        std::set<int> unique_node_ids;
+        for (const auto& elem : b_elements) {
+            for (size_t i = 0; i < elem->getNumNodes(); ++i) {
+                unique_node_ids.insert(elem->getNodeId(i));
+            }
+        }
+        
+        node_ids.assign(unique_node_ids.begin(), unique_node_ids.end());
+        return node_ids;
+    }
+};
+```
+
+##### **3.2 修改 `fem/physics/PhysicsField.hpp`**
+
+让 `PhysicsField` 管理边界条件。
+
+```cpp
+// 在 PhysicsField.hpp 中
+#pragma once
+#include <Eigen/Sparse>
+#include <vector>
+#include <memory>
+#include "../mesh/Mesh.hpp"
+#include "../core/DofManager.hpp"
+#include "../core/BoundaryCondition.hpp" // 引入新头文件
+
+namespace FEM {
+    template<int TDim>
+    class PhysicsField {
+    public:
+        virtual ~PhysicsField() = default;
+
+        // 重命名: assemble -> assemble_volume
+        virtual void assemble_volume(const Mesh& mesh, const DofManager& dof_manager,
+                                     Eigen::SparseMatrix<double>& K_global, Eigen::VectorXd& F_global) = 0;
+
+        // 应用“自然”边界条件 (Neumann, Cauchy)
+        void applyNaturalBCs(const Mesh& mesh, const DofManager& dof_manager,
+                             Eigen::SparseMatrix<double>& K_global, Eigen::VectorXd& F_global) const {
+            for (const auto& bc : boundary_conditions_) {
+                if (bc->getType() != BCType::Dirichlet) {
+                    bc->apply(mesh, dof_manager, K_global, F_global);
+                }
+            }
+        }
+        
+        void addBoundaryCondition(std::unique_ptr<BoundaryCondition<TDim>> bc) {
+            boundary_conditions_.push_back(std::move(bc));
+        }
+
+        const std::vector<std::unique_ptr<BoundaryCondition<TDim>>>& getBoundaryConditions() const {
+            return boundary_conditions_;
+        }
+
+        virtual std::string getName() const = 0;
+
+    private:
+        std::vector<std::unique_ptr<BoundaryCondition<TDim>>> boundary_conditions_;
+    };
+}
+```
+
+**重要工作**：将所有继承自 `PhysicsField` 的具体物理场类（如 `HeatTransfer`、`Electrostatics`）中的 `assemble` 方法重命名为 `assemble_volume`。
+
+##### **3.3 修改 `fem/core/Problem.hpp`**
+
+这是改动最大的部分。`Problem` 类将成为一个高级协调器。
+
+```cpp
+// 在 Problem.hpp 中
+#pragma once
+
+// ... (其他 includes)
+#include <vector>
+#include <utility>
+#include <algorithm>
+#include <stdexcept>
+#include "DofManager.hpp"
+#include "../physics/PhysicsField.hpp"
+#include "LinearSolver.hpp"
+#include "../bcs/DirichletBC.hpp" // 包含头文件
+
+namespace FEM {
+    template<int TDim>
+    class Problem {
+    public:
+        // 构造函数保持不变
+
+        void assemble() {
+            PROFILE_FUNCTION();
+            auto sparsity_pattern = dof_manager_->computeSparsityPattern(*mesh_);
+            K_global_.reserve(sparsity_pattern.size());
+            
+            for (const auto& physics : physics_fields_) {
+                physics->assemble_volume(*mesh_, *dof_manager_, K_global_, F_global_);
+                physics->applyNaturalBCs(*mesh_, *dof_manager_, K_global_, F_global_);
+            }
+        }
+
+        void solve() {
+            applyDirichletBCs(); // 在求解前应用
+            LinearSolver solver(solver_type_);
+            U_solution_ = solver.solve(K_global_, F_global_);
+        }
+
+        // ... (Getters 保持不变)
+
+    private:
+        void initializeSystem() {
+            size_t num_dofs = dof_manager_->getNumDofs();
+            K_global_.resize(num_dofs, num_dofs);
+            F_global_.resize(num_dofs);
+            U_solution_.resize(num_dofs);
+            F_global_.setZero();
+        }
+
+        void applyDirichletBCs() {
+            PROFILE_FUNCTION();
+
+            std::vector<std::pair<int, double>> all_dirichlet_dofs;
+            for (const auto& physics : physics_fields_) {
+                for (const auto& bc : physics->getBoundaryConditions()) {
+                    if (bc->getType() == BCType::Dirichlet) {
+                        const auto* dirichlet_bc = static_cast<const DirichletBC<TDim>*>(bc.get());
+                        const double bc_value = dirichlet_bc->getValue();
+                        
+                        const auto& boundary_nodes = mesh_->getBoundaryNodes(dirichlet_bc->getBoundaryName());
+                        for (int node_id : boundary_nodes) {
+                            int dof_index = dof_manager_->getNodeDof(node_id, 0);
+                            all_dirichlet_dofs.push_back({dof_index, bc_value});
+                        }
+                    }
+                }
+            }
+
+            if (all_dirichlet_dofs.empty()) return;
+
+            // (这里粘贴你原有的 applyBCs 的完整实现逻辑来修改 K_global 和 F_global)
+            std::vector<int> bc_dofs;
+            bc_dofs.reserve(all_dirichlet_dofs.size());
+            for(const auto& bc : all_dirichlet_dofs){
+                bc_dofs.push_back(bc.first);
+            }
+            std::sort(bc_dofs.begin(), bc_dofs.end());
+            bc_dofs.erase(std::unique(bc_dofs.begin(), bc_dofs.end()), bc_dofs.end());
+
+            for (const auto& bc : all_dirichlet_dofs) {
+                int dof_bc = bc.first;
+                double val_bc = bc.second;
+
+                for (Eigen::SparseMatrix<double>::InnerIterator it(K_global_, dof_bc); it; ++it) {
+                    if (!std::binary_search(bc_dofs.begin(), bc_dofs.end(), it.row())) {
+                        F_global_(it.row()) -= it.value() * val_bc;
+                    }
+                }
+            }
+            
+            for (int dof_bc : bc_dofs) {
+                for (Eigen::SparseMatrix<double>::InnerIterator it(K_global_, dof_bc); it; ++it) { it.valueRef() = 0.0; }
+                for (int k = 0; k < K_global_.outerSize(); ++k) {
+                    for (Eigen::SparseMatrix<double>::InnerIterator it(K_global_, k); it; ++it) {
+                        if (it.row() == dof_bc) { it.valueRef() = 0.0; }
+                    }
+                }
+            }
+
+            for (const auto& bc : all_dirichlet_dofs) {
+                K_global_.coeffRef(bc.first, bc.first) = 1.0;
+                F_global_(bc.first) = bc.second;
+            }
+
+            K_global_.prune(0.0);
+        }
+
+        std::unique_ptr<Mesh> mesh_;
+        std::vector<std::unique_ptr<PhysicsField<TDim>>> physics_fields_;
+        std::unique_ptr<DofManager> dof_manager_;
+        SolverType solver_type_;
+
+        Eigen::SparseMatrix<double> K_global_;
+        Eigen::VectorXd F_global_;
+        Eigen::VectorXd U_solution_;
+        // 移除 dirichlet_bcs_ 成员变量
+    };
+}
+```
+
+-----
+
+### **重构后的工作流程示例 (`main.cpp`)**
+
+你的主程序或测试用例现在将以一种更清晰、统一的方式来定义和设置问题。
+
+```cpp
+#include "fem/core/Problem.hpp"
+#include "fem/physics/HeatTransfer.hpp" // 示例物理场
+#include "fem/bcs/DirichletBC.hpp"
+#include "fem/bcs/NeumannBC.hpp"
+#include "fem/bcs/CauchyBC.hpp"
+// ...
+
+int main() {
+    // 1. 设置网格和材料
+    auto mesh = std::make_unique<Mesh>(...); // 假设已从文件加载并设置好命名边界
+    Material material(...);
+    
+    // 2. 创建物理场
+    auto heat_physics = std::make_unique<HeatTransfer<3>>(material);
+    
+    // 3. 以统一的方式添加所有边界条件
+    heat_physics->addBoundaryCondition(
+        std::make_unique<DirichletBC<3>>("inlet_boundary", 100.0)
+    );
+    heat_physics->addBoundaryCondition(
+        std::make_unique<NeumannBC<3>>("flux_boundary", 50.0)
+    );
+    heat_physics->addBoundaryCondition(
+        std::make_unique<CauchyBC<3>>("convection_boundary", 25.0, 298.15)
+    );
+    
+    // 4. 创建并配置 Problem
+    std::vector<std::unique_ptr<PhysicsField<3>>> physics_fields;
+    physics_fields.push_back(std::move(heat_physics));
+    Problem<3> problem(std::move(mesh), std::move(physics_fields));
+    
+    // 5. 组装和求解
+    problem.assemble(); // 内部自动处理 Neumann 和 Cauchy
+    problem.solve();    // 内部自动处理 Dirichlet
+    
+    // 6. 导出结果...
+    
+    return 0;
+}
+```

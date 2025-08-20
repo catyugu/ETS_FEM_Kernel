@@ -2,13 +2,18 @@
 #include <iostream>
 #include <cmath>
 #include <limits>
+#include <io/Exporter.hpp>
+#include <kernels/ElectrostaticsKernel.hpp>
+#include <physics/Electrostatics.hpp>
 #include <utils/Profiler.hpp>
 
 #include "core/Problem.hpp"
 #include "materials/Material.hpp"
-#include "kernels/ElectrostaticsKernel.hpp"
+#include "kernels/HeatDiffusionKernel.hpp"
 #include "io/Importer.hpp"
-#include "physics/Electrostatics.hpp"
+#include "physics/HeatTransfer.hpp"
+// 添加边界条件头文件
+#include "bcs/DirichletBC.hpp"
 
 using namespace FEM;
 using namespace FEM::IO;
@@ -79,17 +84,13 @@ TEST_F(TestElectrostatics, SolveElectrostaticsOnImportedMesh) {
         constexpr int dim = 3;
         auto physics = std::make_unique<Electrostatics<dim>>();
 
-        // 添加静电场内核 (使用四面体单元，因为COMSOL网格文件中是四面体单元)
         constexpr int num_nodes_per_elem = 4;
         physics->addKernel(
             std::make_unique<ElectrostaticsKernel<dim, num_nodes_per_elem>>(*material)
         );
 
-        // 创建问题实例
-        auto problem = std::make_unique<Problem<dim>>(std::move(mesh), std::move(physics), SolverType::ConjugateGradient);
-
-
-        const auto& nodes = problem->getMesh().getNodes();
+        // 使用基于坐标的边界条件设置
+        const auto& nodes = mesh->getNodes();
 
         int left_bcs = 0;
         int right_bcs = 0;
@@ -106,19 +107,38 @@ TEST_F(TestElectrostatics, SolveElectrostaticsOnImportedMesh) {
 
         std::cout << "X range: [" << min_x << ", " << max_x << "], tolerance: " << tolerance << std::endl;
 
+        // 创建临时存储边界节点的容器
+        std::vector<int> left_boundary_nodes, right_boundary_nodes;
+        
         for (const auto& node : nodes) {
             const auto& coords = node->getCoords();
             // 左侧边界 (x ≈ min_x)
             if (std::abs(coords[0] - min_x) < tolerance) {
-                problem->addDirichletBC(node->getId(), 0.1);
+                left_boundary_nodes.push_back(node->getId());
                 left_bcs++;
             }
             // 右侧边界 (x ≈ max_x)
             else if (std::abs(coords[0] - max_x) < tolerance) {
-                problem->addDirichletBC(node->getId(), 0.0);
+                right_boundary_nodes.push_back(node->getId());
                 right_bcs++;
             }
         }
+
+        // 为导入的网格添加边界信息
+        for (int node_id : left_boundary_nodes) {
+            mesh->addBoundaryNode("left_boundary", node_id);
+        }
+        for (int node_id : right_boundary_nodes) {
+            mesh->addBoundaryNode("right_boundary", node_id);
+        }
+
+        // 添加边界条件到物理场
+        physics->addBoundaryCondition(
+            std::make_unique<DirichletBC<dim>>("left_boundary", 0.1)
+        );
+        physics->addBoundaryCondition(
+            std::make_unique<DirichletBC<dim>>("right_boundary", 0.0)
+        );
 
         ASSERT_GT(left_bcs, 0) << "No left boundary conditions set";
         ASSERT_GT(right_bcs, 0) << "No right boundary conditions set";
@@ -126,9 +146,11 @@ TEST_F(TestElectrostatics, SolveElectrostaticsOnImportedMesh) {
         std::cout << "Left boundary conditions: " << left_bcs << std::endl;
         std::cout << "Right boundary conditions: " << right_bcs << std::endl;
 
+        // 创建问题实例
+        auto problem = std::make_unique<Problem<dim>>(std::move(mesh), std::move(physics), SolverType::SparseLU);
+
         // 组装和求解
         EXPECT_NO_THROW(problem->assemble()) << "Assembly should not throw";
-        EXPECT_NO_THROW(problem->applyBCs()) << "Applying BCs should not throw";
         EXPECT_NO_THROW(problem->solve()) << "Solving should not throw";
 
         // 读取参考数据 - 直接读取电势数据
