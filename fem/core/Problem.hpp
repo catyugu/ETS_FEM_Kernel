@@ -18,25 +18,34 @@ namespace FEM {
     class Problem {
     public:
         Problem(std::unique_ptr<Mesh> mesh, std::unique_ptr<PhysicsField<TDim>> physics, SolverType solver_type = SolverType::SparseLU)
-            : mesh_(std::move(mesh)), physics_(std::move(physics)), dof_manager_(*mesh_), solver_type_(solver_type) {
-            dof_manager_.buildDofMap(1);
-            size_t num_dofs = dof_manager_.getNumDofs();
-            K_global_.resize(num_dofs, num_dofs);
-            F_global_.resize(num_dofs);
-            U_solution_.resize(num_dofs);
-            F_global_.setZero();
+            : mesh_(std::move(mesh)), solver_type_(solver_type) {
+            physics_fields_.push_back(std::move(physics));
+            dof_manager_ = std::make_unique<DofManager>(*mesh_);
+            dof_manager_->buildDofMap(1);
+            initializeSystem();
+        }
+
+        // 新增：支持多物理场的构造函数
+        Problem(std::unique_ptr<Mesh> mesh, std::vector<std::unique_ptr<PhysicsField<TDim>>> physics_fields, SolverType solver_type = SolverType::SparseLU)
+            : mesh_(std::move(mesh)), physics_fields_(std::move(physics_fields)), solver_type_(solver_type) {
+            dof_manager_ = std::make_unique<DofManager>(*mesh_);
+            dof_manager_->buildDofMap(1);
+            initializeSystem();
         }
 
         void assemble() {
             PROFILE_FUNCTION();
-            auto sparsity_pattern = dof_manager_.computeSparsityPattern(*mesh_);
+            auto sparsity_pattern = dof_manager_->computeSparsityPattern(*mesh_);
             K_global_.reserve(sparsity_pattern.size());
             
-            physics_->assemble(*mesh_, dof_manager_, K_global_, F_global_);
+            // 组装所有物理场
+            for (const auto& physics : physics_fields_) {
+                physics->assemble(*mesh_, *dof_manager_, K_global_, F_global_);
+            }
         }
 
         void addDirichletBC(int node_id, double value) {
-            int dof_index = dof_manager_.getNodeDof(node_id, 0);
+            int dof_index = dof_manager_->getNodeDof(node_id, 0);
             dirichlet_bcs_.push_back({dof_index, value});
         }
 
@@ -88,13 +97,30 @@ namespace FEM {
         // Exporter 需要通过这些接口来获取数据
         const Mesh& getMesh() const { return *mesh_; }
         const Eigen::VectorXd& getSolution() const { return U_solution_; }
-        const PhysicsField<TDim>& getPhysicsField() const { return *physics_; }
-        const DofManager& getDofManager() const { return dof_manager_; }
+        const DofManager& getDofManager() const { return *dof_manager_; }
+        
+        // 新增：获取物理场的接口
+        const PhysicsField<TDim>& getPhysicsField(size_t index = 0) const { 
+            if (index < physics_fields_.size()) {
+                return *physics_fields_[index];
+            }
+            throw std::out_of_range("Physics field index out of range");
+        }
+        
+        size_t getNumPhysicsFields() const { return physics_fields_.size(); }
 
     private:
+        void initializeSystem() {
+            size_t num_dofs = dof_manager_->getNumDofs();
+            K_global_.resize(num_dofs, num_dofs);
+            F_global_.resize(num_dofs);
+            U_solution_.resize(num_dofs);
+            F_global_.setZero();
+        }
+
         std::unique_ptr<Mesh> mesh_;
-        std::unique_ptr<PhysicsField<TDim>> physics_;
-        DofManager dof_manager_;
+        std::vector<std::unique_ptr<PhysicsField<TDim>>> physics_fields_;
+        std::unique_ptr<DofManager> dof_manager_;
         SolverType solver_type_;
 
         Eigen::SparseMatrix<double> K_global_;

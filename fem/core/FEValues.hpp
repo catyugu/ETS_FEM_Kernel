@@ -24,7 +24,6 @@ namespace FEM {
 
             all_JxW_.reserve(finite_element_->getNumQuadPoints());
             all_dN_dx_.reserve(finite_element_->getNumQuadPoints());
-            all_B_matrices_.reserve(finite_element_->getNumQuadPoints());
 
             for (size_t q = 0; q < finite_element_->getNumQuadPoints(); ++q) {
                 const auto& dN_dxi = finite_element_->getShapeFunctionDerivatives(q);
@@ -35,9 +34,6 @@ namespace FEM {
                 all_JxW_.push_back(detJ * finite_element_->getQuadWeight(q));
                 Eigen::MatrixXd dN_dx = jacobian.inverse() * dN_dxi;
                 all_dN_dx_.push_back(dN_dx);
-
-                // 构建并缓存B矩阵
-                all_B_matrices_.push_back(buildBMatrix(dN_dx));
             }
         }
 
@@ -48,19 +44,8 @@ namespace FEM {
         const Eigen::VectorXd& N() const { return finite_element_->getShapeFunctions(q_point_index_); }
         const Eigen::MatrixXd& dN_dx() const { return all_dN_dx_[q_point_index_]; }
         double JxW() const { return all_JxW_[q_point_index_]; }
-        const Eigen::MatrixXd& B() const { return all_B_matrices_[q_point_index_]; } // <--- 获取B矩阵
 
     private:
-        // 根据分析类型构建B矩阵
-        Eigen::MatrixXd buildBMatrix(const Eigen::MatrixXd& dN_dx) {
-            if (analysis_type_ == AnalysisType::SCALAR_DIFFUSION) {
-                // 对于标量扩散，B矩阵就是梯度算子
-                return dN_dx;
-            }
-            // 未来可添加其他类型的B矩阵
-            throw std::runtime_error("Unsupported analysis type for B-matrix construction.");
-        }
-
         // ... (其他成员变量不变) ...
         const Element& element_;
         std::unique_ptr<FiniteElement> finite_element_;
@@ -69,6 +54,5 @@ namespace FEM {
 
         std::vector<double> all_JxW_;
         std::vector<Eigen::MatrixXd> all_dN_dx_;
-        std::vector<Eigen::MatrixXd> all_B_matrices_; // <--- 新增
     };
 }

@@ -2,13 +2,26 @@
 
 ## 描述
 
-`DofManager` 类负责管理有限元问题中的自由度（Degrees of Freedom）。它为网格中的每个节点分配自由度索引，并提供获取单元自由度、节点自由度等信息的接口。该类还支持稀疏模式预计算功能，以提高矩阵组装的性能。
+`DofManager` 类负责管理有限元网格中各个几何实体（节点、边、面、体）上的自由度。它为每个自由度分配全局唯一的索引，并提供计算稀疏矩阵模式的功能。
+
+与之前版本相比，该类现在支持多种自由度类型，不仅支持传统的节点自由度，还支持边、面和体自由度，为使用边缘元等高级单元类型提供了支持。
 
 ## 类定义
 
 ```cpp
 class DofManager
 ```
+
+## 枚举类型
+
+### DofType
+
+自由度类型枚举，定义了支持的自由度类型：
+
+- `NODE` - 节点自由度
+- `EDGE` - 边自由度
+- `FACE` - 面自由度
+- `VOLUME` - 体自由度
 
 ## 构造函数
 
@@ -17,80 +30,115 @@ class DofManager
 构造函数，使用给定的网格初始化自由度管理器。
 
 **参数:**
-- `mesh` - 网格对象的引用
+- `mesh` - 网格对象的常量引用
 
 ## 成员函数
 
-### void buildDofMap(int dofs_per_node)
+### void buildDofMap(int dofs_per_entity, DofType dof_type = DofType::NODE)
 
-构建自由度映射表。
-
-**参数:**
-- `dofs_per_node` - 每个节点的自由度数量 (例如，热学问题为1)
-
-### std::vector<int> getElementDofs(const Element& element) const
-
-获取一个单元所有节点的自由度索引。
+构建自由度映射。
 
 **参数:**
-- `element` - 单元对象
+- `dofs_per_entity` - 每个几何实体上的自由度数量
+- `dof_type` - 自由度类型（默认为节点自由度）
 
-**返回值:**
-- 包含单元所有自由度索引的向量
+### int getNodeDof(int node_id, int dof_component = 0) const
 
-### int getNodeDof(int node_id, int component) const
-
-获取指定节点的特定自由度索引。
+获取节点自由度索引。
 
 **参数:**
 - `node_id` - 节点ID
-- `component` - 自由度分量
+- `dof_component` - 自由度分量（对于矢量问题，如二维问题中的x和y分量）
 
 **返回值:**
-- 自由度索引
+- 全局自由度索引，如果未找到则返回-1
 
-**异常:**
-- `std::out_of_range` - 当component超出范围时抛出
+### int getEdgeDof(int edge_id, int dof_component = 0) const
+
+获取边自由度索引。
+
+**参数:**
+- `edge_id` - 边ID
+- `dof_component` - 自由度分量
+
+**返回值:**
+- 全局自由度索引，如果未找到则返回-1
+
+### int getFaceDof(int face_id, int dof_component = 0) const
+
+获取面自由度索引。
+
+**参数:**
+- `face_id` - 面ID
+- `dof_component` - 自由度分量
+
+**返回值:**
+- 全局自由度索引，如果未找到则返回-1
+
+### int getVolumeDof(int volume_id, int dof_component = 0) const
+
+获取体自由度索引。
+
+**参数:**
+- `volume_id` - 体ID
+- `dof_component` - 自由度分量
+
+**返回值:**
+- 全局自由度索引，如果未找到则返回-1
 
 ### size_t getNumDofs() const
 
-获取总的自由度数量。
+获取自由度总数。
 
 **返回值:**
-- 总自由度数
+- 自由度总数
 
 ### std::vector<std::pair<int, int>> computeSparsityPattern(const Mesh& mesh) const
 
-计算稀疏模式，为矩阵预分配做准备。
+计算稀疏模式，用于预分配稀疏矩阵的存储空间。
 
 **参数:**
 - `mesh` - 网格对象
 
 **返回值:**
-- 包含所有非零元素位置的索引对向量
+- 稀疏模式（非零元素位置的集合）
+
+## 实现细节
+
+`DofManager` 类通过为每个几何实体分配连续的自由度索引来管理自由度。它支持多种自由度类型：
+
+1. **节点自由度 (DofType::NODE)** - 传统的有限元自由度，定义在网格节点上
+2. **边自由度 (DofType::EDGE)** - 定义在网格边上，用于边缘元等
+3. **面自由度 (DofType::FACE)** - 定义在网格面上
+4. **体自由度 (DofType::VOLUME)** - 定义在网格体单元内
+
+对于矢量问题（如弹性力学），每个几何实体可能有多个自由度分量。例如，在二维问题中，每个节点可能有x和y两个方向的位移分量。
+
+稀疏模式计算功能通过遍历所有单元并确定哪些自由度之间存在耦合关系来工作。这允许在组装全局矩阵之前预分配正确的存储空间，从而提高性能。
 
 ## 示例用法
 
 ```cpp
+// 假设已经有一个网格对象
+FEM::Mesh mesh = ...;
+
 // 创建自由度管理器
 FEM::DofManager dof_manager(mesh);
 
-// 为标量问题（如热传导）构建自由度映射
-dof_manager.buildDofMap(1);
+// 为标量问题构建节点自由度映射（每个节点1个自由度）
+dof_manager.buildDofMap(1, FEM::DofType::NODE);
 
-// 获取单元的自由度
-auto element_dofs = dof_manager.getElementDofs(element);
+// 为二维矢量问题构建节点自由度映射（每个节点2个自由度）
+dof_manager.buildDofMap(2, FEM::DofType::NODE);
 
-// 获取特定节点的自由度
-int node_dof = dof_manager.getNodeDof(node_id, 0);
+// 获取特定节点的自由度索引
+int dof_index = dof_manager.getNodeDof(5, 0); // 节点5的第0个自由度分量
 
-// 计算稀疏模式以优化矩阵组装
+// 计算稀疏模式
 auto sparsity_pattern = dof_manager.computeSparsityPattern(mesh);
 ```
 
-## 注意事项
+## 依赖关系
 
-1. 在调用其他方法之前，必须先调用 `buildDofMap` 方法
-2. `computeSparsityPattern` 方法用于性能优化，可在矩阵组装前预计算稀疏模式
-3. 自由度索引从0开始
-4. 对于向量问题（如弹性力学），每个节点可能有多个自由度
+- [Mesh](../../mesh/classes/Mesh.md) - 网格类
+- Eigen - 稀疏矩阵库

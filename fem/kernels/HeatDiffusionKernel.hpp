@@ -26,8 +26,11 @@ namespace FEM {
                 // 简化：暂时仍使用常数
                 double k = k_prop.evaluate();
 
-                const auto& B = fe_values.B(); // 获取B矩阵
-                double D = k;                  // 获取D矩阵 (标量)
+                // 构建B矩阵 (梯度算子)
+                const auto& dN_dx = fe_values.dN_dx();
+                Eigen::MatrixXd B = dN_dx;
+
+                double D = k; // 获取D矩阵 (标量)
 
                 // --- 通用形式： K_elem += B^T * D * B * dV ---
                 K_elem += (B.transpose() * D * B) * fe_values.JxW();
