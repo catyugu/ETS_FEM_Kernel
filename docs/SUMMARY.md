@@ -24,6 +24,7 @@
 
 - [DofManager](fem/core/classes/DofManager.md) - 自由度管理器
 - [FEValues](fem/core/classes/FEValues.md) - 有限元值计算器
+- [FiniteElement](fem/core/classes/FiniteElement.md) - 有限单元类
 - [LinearSolver](fem/core/classes/LinearSolver.md) - 线性求解器
 - [Problem](fem/core/classes/Problem.md) - 问题定义基类
 - [ReferenceElement](fem/core/classes/ReferenceElement.md) - 参考单元类

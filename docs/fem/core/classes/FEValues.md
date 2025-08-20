@@ -6,6 +6,8 @@
 
 该类是有限元计算中的关键组件，它封装了从参考单元到实际单元的变换过程，并提供了访问形状函数值、梯度以及雅可比行列式等信息的接口。
 
+与之前版本相比，该类现在使用 [FiniteElement](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/FiniteElement.hpp#L18-L88) 类来处理形函数和积分规则，提高了代码的模块化和可扩展性。
+
 ## 类定义
 
 ```cpp
@@ -99,11 +101,12 @@ for (size_t q = 0; q < fe_values.n_quad_points(); ++q) {
 `FEValues` 类在构造时计算所有积分点上的数据并缓存起来，包括：
 - 雅可比矩阵及其行列式
 - 形状函数在实际坐标下的梯度
-- B矩阵（根据分析类型构建）
+
+与之前的实现相比，现在通过 [FiniteElement](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/FiniteElement.hpp#L18-L88) 类获取形函数和积分点信息，而不是直接使用 [ReferenceElement](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/ReferenceElement.hpp#L18-L23)。这种设计使得添加新的单元类型更加容易，只需要扩展 [FiniteElement](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/FiniteElement.hpp#L18-L88) 类即可。
 
 ## 依赖关系
 
 - [Element](../../mesh/classes/Element.md) - 单元类
-- [ReferenceElement](ReferenceElement.md) - 参考单元数据
-- [AnalysisType](../AnalysisTypes.hpp) - 分析类型枚举
+- [FiniteElement](FiniteElement.md) - 有限单元类
+- [AnalysisType](AnalysisTypes.md) - 分析类型枚举
 - Eigen - 矩阵运算库

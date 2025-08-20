@@ -6,6 +6,7 @@
 #include "../utils/Quadrature.hpp"
 #include "../utils/ShapeFunctions.hpp"
 #include "../mesh/Element.hpp"
+#include "FiniteElement.hpp"
 
 namespace FEM {
     // 预计算并缓存的数据结构体
@@ -64,4 +65,23 @@ namespace FEM {
         }
         inline static std::map<std::pair<ElementType, int>, ReferenceElementData> cache_;
     };
+    
+    // 实现FiniteElement的create函数
+    inline std::unique_ptr<FiniteElement> FiniteElement::create(ElementType type, int order) {
+        switch (type) {
+            case ElementType::Line:
+                return std::make_unique<FiniteElementImpl<ElementType::Line, 2>>(order);
+            case ElementType::Triangle:
+                // TODO: 实现三角形单元
+                throw std::runtime_error("Triangle element not yet implemented");
+            case ElementType::Quadrilateral:
+                return std::make_unique<FiniteElementImpl<ElementType::Quadrilateral, 4>>(order);
+            case ElementType::Tetrahedron:
+                return std::make_unique<FiniteElementImpl<ElementType::Tetrahedron, 4>>(order);
+            case ElementType::Hexahedron:
+                return std::make_unique<FiniteElementImpl<ElementType::Hexahedron, 8>>(order);
+            default:
+                throw std::runtime_error("Unsupported element type");
+        }
+    }
 }
