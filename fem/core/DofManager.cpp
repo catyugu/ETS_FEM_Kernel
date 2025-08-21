@@ -46,180 +46,21 @@ namespace FEM {
                 break;
             }
             case DofType::EDGE: {
-                // 实现边自由度映射
-                // 需要遍历所有单元并识别唯一的边
-                std::set<std::pair<int, int>> edges;
-                
-                for (const auto& elem : mesh_.getElements()) {
-                    const auto& nodes = elem->getNodes();
-                    // 根据单元类型确定边
-                    switch (elem->getType()) {
-                        case ElementType::Line:
-                            // 线单元本身就是一条边
-                            if (nodes.size() >= 2) {
-                                std::pair<int, int> edge(nodes[0]->getId(), nodes[1]->getId());
-                                if (edge.first > edge.second) std::swap(edge.first, edge.second);
-                                edges.insert(edge);
-                            }
-                            break;
-                        case ElementType::Triangle:
-                            // 三角形单元有3条边
-                            for (size_t i = 0; i < 3; ++i) {
-                                size_t next = (i + 1) % 3;
-                                std::pair<int, int> edge(nodes[i]->getId(), nodes[next]->getId());
-                                if (edge.first > edge.second) std::swap(edge.first, edge.second);
-                                edges.insert(edge);
-                            }
-                            break;
-                        case ElementType::Quadrilateral:
-                            // 四边形单元有4条边
-                            for (size_t i = 0; i < 4; ++i) {
-                                size_t next = (i + 1) % 4;
-                                std::pair<int, int> edge(nodes[i]->getId(), nodes[next]->getId());
-                                if (edge.first > edge.second) std::swap(edge.first, edge.second);
-                                edges.insert(edge);
-                            }
-                            break;
-                        case ElementType::Tetrahedron:
-                            // 四面体单元有6条边
-                            for (size_t i = 0; i < 4; ++i) {
-                                for (size_t j = i + 1; j < 4; ++j) {
-                                    std::pair<int, int> edge(nodes[i]->getId(), nodes[j]->getId());
-                                    if (edge.first > edge.second) std::swap(edge.first, edge.second);
-                                    edges.insert(edge);
-                                }
-                            }
-                            break;
-                        case ElementType::Hexahedron:
-                            // 六面体单元有12条边
-                            // 底面4条边
-                            for (size_t i = 0; i < 4; ++i) {
-                                size_t next = (i + 1) % 4;
-                                std::pair<int, int> edge(nodes[i]->getId(), nodes[next]->getId());
-                                if (edge.first > edge.second) std::swap(edge.first, edge.second);
-                                edges.insert(edge);
-                            }
-                            // 顶面4条边
-                            for (size_t i = 4; i < 8; ++i) {
-                                size_t next = (i + 1) % 4 + 4;
-                                std::pair<int, int> edge(nodes[i]->getId(), nodes[next]->getId());
-                                if (edge.first > edge.second) std::swap(edge.first, edge.second);
-                                edges.insert(edge);
-                            }
-                            // 垂直边4条
-                            for (size_t i = 0; i < 4; ++i) {
-                                std::pair<int, int> edge(nodes[i]->getId(), nodes[i+4]->getId());
-                                if (edge.first > edge.second) std::swap(edge.first, edge.second);
-                                edges.insert(edge);
-                            }
-                            break;
-                        default:
-                            break;
-                    }
-                }
-                
-                // 为每条边分配自由度
-                int edge_index = 0;
-                for (const auto& edge : edges) {
-                    // 创建边ID（基于节点ID）
-                    int edge_id = edge.first * 10000 + edge.second;
-                    var.dof_map_[edge_id] = edge_index * var.components;
-                    edge_index++;
+                // 使用Mesh类提供的边信息
+                const auto& edges = mesh_.getEdges();
+                var.dof_map_.clear();
+                for (size_t i = 0; i < edges.size(); ++i) {
+                    var.dof_map_[edges[i]->id] = static_cast<int>(i * var.components);
                 }
                 total_dofs_ += edges.size() * var.components;
                 break;
             }
             case DofType::FACE: {
-                // 实现面自由度映射
-                // 需要遍历所有单元并识别唯一的面
-                std::set<std::set<int>> faces;
-                
-                for (const auto& elem : mesh_.getElements()) {
-                    const auto& nodes = elem->getNodes();
-                    // 根据单元类型确定面
-                    switch (elem->getType()) {
-                        case ElementType::Triangle:
-                        case ElementType::Quadrilateral:
-                            // 2D单元的面就是单元本身
-                            {
-                                std::set<int> face_nodes;
-                                for (const auto& node : nodes) {
-                                    face_nodes.insert(node->getId());
-                                }
-                                faces.insert(face_nodes);
-                            }
-                            break;
-                        case ElementType::Tetrahedron:
-                            // 四面体单元有4个面
-                            // 面0: 节点 0,1,2
-                            {
-                                std::set<int> face_nodes = {nodes[0]->getId(), nodes[1]->getId(), nodes[2]->getId()};
-                                faces.insert(face_nodes);
-                            }
-                            // 面1: 节点 0,1,3
-                            {
-                                std::set<int> face_nodes = {nodes[0]->getId(), nodes[1]->getId(), nodes[3]->getId()};
-                                faces.insert(face_nodes);
-                            }
-                            // 面2: 节点 0,2,3
-                            {
-                                std::set<int> face_nodes = {nodes[0]->getId(), nodes[2]->getId(), nodes[3]->getId()};
-                                faces.insert(face_nodes);
-                            }
-                            // 面3: 节点 1,2,3
-                            {
-                                std::set<int> face_nodes = {nodes[1]->getId(), nodes[2]->getId(), nodes[3]->getId()};
-                                faces.insert(face_nodes);
-                            }
-                            break;
-                        case ElementType::Hexahedron:
-                            // 六面体单元有6个面
-                            // 底面: 节点 0,1,2,3
-                            {
-                                std::set<int> face_nodes = {nodes[0]->getId(), nodes[1]->getId(), nodes[2]->getId(), nodes[3]->getId()};
-                                faces.insert(face_nodes);
-                            }
-                            // 顶面: 节点 4,5,6,7
-                            {
-                                std::set<int> face_nodes = {nodes[4]->getId(), nodes[5]->getId(), nodes[6]->getId(), nodes[7]->getId()};
-                                faces.insert(face_nodes);
-                            }
-                            // 前面: 节点 0,1,5,4
-                            {
-                                std::set<int> face_nodes = {nodes[0]->getId(), nodes[1]->getId(), nodes[5]->getId(), nodes[4]->getId()};
-                                faces.insert(face_nodes);
-                            }
-                            // 后面: 节点 3,2,6,7
-                            {
-                                std::set<int> face_nodes = {nodes[3]->getId(), nodes[2]->getId(), nodes[6]->getId(), nodes[7]->getId()};
-                                faces.insert(face_nodes);
-                            }
-                            // 左面: 节点 0,3,7,4
-                            {
-                                std::set<int> face_nodes = {nodes[0]->getId(), nodes[3]->getId(), nodes[7]->getId(), nodes[4]->getId()};
-                                faces.insert(face_nodes);
-                            }
-                            // 右面: 节点 1,2,6,5
-                            {
-                                std::set<int> face_nodes = {nodes[1]->getId(), nodes[2]->getId(), nodes[6]->getId(), nodes[5]->getId()};
-                                faces.insert(face_nodes);
-                            }
-                            break;
-                        default:
-                            break;
-                    }
-                }
-                
-                // 为每个面分配自由度
-                int face_index = 0;
-                for (const auto& face : faces) {
-                    // 创建面ID（基于节点ID的哈希）
-                    int face_id = 0;
-                    for (int node_id : face) {
-                        face_id = face_id * 12512515 + node_id;  // 简单的哈希算法
-                    }
-                    var.dof_map_[face_id] = face_index * var.components;
-                    face_index++;
+                // 使用Mesh类提供的面信息
+                const auto& faces = mesh_.getFaces();
+                var.dof_map_.clear();
+                for (size_t i = 0; i < faces.size(); ++i) {
+                    var.dof_map_[faces[i]->id] = static_cast<int>(i * var.components);
                 }
                 total_dofs_ += faces.size() * var.components;
                 break;
@@ -350,52 +191,57 @@ namespace FEM {
                     break;
                 }
                 case DofType::EDGE: {
-                    // 对于边自由度，需要确定单元的边
-                    const auto& nodes = elem->getNodes();
-                    var_dofs.reserve(nodes.size() * var.components);
-
-                    // 这里需要根据单元类型确定边
-                    // 简化实现：假定每两个相邻节点定义一条边
-                    for (size_t i = 0; i < nodes.size(); ++i) {
-                        size_t next = (i + 1) % nodes.size();
-                        // 创建一个基于节点ID的边标识符
-                        std::pair<int, int> edge_key(nodes[i]->getId(), nodes[next]->getId());
-                        // 保证边的方向一致性（较小ID在前）
-                        if (edge_key.first > edge_key.second) {
-                            std::swap(edge_key.first, edge_key.second);
-                        }
-                        
-                        // 将边标识符转换为整数ID（简化方法）
-                        int edge_id = edge_key.first * 10000 + edge_key.second;
-                        
-                        for (int j = 0; j < var.components; ++j) {
-                            int dof = getEdgeDof(var.name, edge_id, j);
-                            if (dof >= 0) var_dofs.push_back(dof);
+                    // 对于边自由度，使用Mesh类提供的边信息
+                    const auto& edges = mesh_.getEdges();
+                    var_dofs.reserve(edges.size() * var.components);
+                    
+                    // 查找与当前单元相关的边
+                    const auto& elem_nodes = elem->getNodes();
+                    std::set<int> elem_node_ids;
+                    for (const auto& node : elem_nodes) {
+                        elem_node_ids.insert(node->getId());
+                    }
+                    
+                    for (const auto& edge : edges) {
+                        // 检查边的两个节点是否都在当前单元中
+                        if (elem_node_ids.count(edge->node_ids.first) && 
+                            elem_node_ids.count(edge->node_ids.second)) {
+                            for (int j = 0; j < var.components; ++j) {
+                                int dof = getEdgeDof(var.name, edge->id, j);
+                                if (dof >= 0) var_dofs.push_back(dof);
+                            }
                         }
                     }
                     break;
                 }
                 case DofType::FACE: {
-                    const auto& nodes = elem->getNodes();
-                    var_dofs.reserve(nodes.size() * var.components);
-
-                    // 对于面自由度，简化处理：使用所有节点ID来标识面
-                    // 这是一种简化实现，实际应用中需要更精确的面标识方法
-                    std::vector<int> node_ids;
-                    for (const auto& node : nodes) {
-                        node_ids.push_back(node->getId());
-                    }
-                    std::sort(node_ids.begin(), node_ids.end());
+                    // 对于面自由度，使用Mesh类提供的面信息
+                    const auto& faces = mesh_.getFaces();
+                    var_dofs.reserve(faces.size() * var.components);
                     
-                    // 创建面ID（简化方法：基于排序后的节点ID）
-                    int face_id = 0;
-                    for (size_t i = 0; i < std::min(node_ids.size(), size_t(4)); ++i) {
-                        face_id = face_id * 1000 + node_ids[i];
+                    // 查找与当前单元相关的面
+                    const auto& elem_nodes = elem->getNodes();
+                    std::set<int> elem_node_ids;
+                    for (const auto& node : elem_nodes) {
+                        elem_node_ids.insert(node->getId());
                     }
                     
-                    for (int i = 0; i < var.components; ++i) {
-                        int dof = getFaceDof(var.name, face_id, i);
-                        if (dof >= 0) var_dofs.push_back(dof);
+                    for (const auto& face : faces) {
+                        // 检查面的所有节点是否都在当前单元中
+                        bool all_nodes_in_elem = true;
+                        for (int node_id : face->node_ids) {
+                            if (elem_node_ids.find(node_id) == elem_node_ids.end()) {
+                                all_nodes_in_elem = false;
+                                break;
+                            }
+                        }
+                        
+                        if (all_nodes_in_elem) {
+                            for (int i = 0; i < var.components; ++i) {
+                                int dof = getFaceDof(var.name, face->id, i);
+                                if (dof >= 0) var_dofs.push_back(dof);
+                            }
+                        }
                     }
                     break;
                 }
@@ -449,179 +295,22 @@ namespace FEM {
     }
 
     void DofManager::buildEdgeDofMap() {
-        // 实现边自由度映射
-        // 需要遍历所有单元并识别唯一的边
-        std::set<std::pair<int, int>> edges;
-        
-        for (const auto& elem : mesh_.getElements()) {
-            const auto& nodes = elem->getNodes();
-            // 根据单元类型确定边
-            switch (elem->getType()) {
-                case ElementType::Line:
-                    // 线单元本身就是一条边
-                    if (nodes.size() >= 2) {
-                        std::pair<int, int> edge(nodes[0]->getId(), nodes[1]->getId());
-                        if (edge.first > edge.second) std::swap(edge.first, edge.second);
-                        edges.insert(edge);
-                    }
-                    break;
-                case ElementType::Triangle:
-                    // 三角形单元有3条边
-                    for (size_t i = 0; i < 3; ++i) {
-                        size_t next = (i + 1) % 3;
-                        std::pair<int, int> edge(nodes[i]->getId(), nodes[next]->getId());
-                        if (edge.first > edge.second) std::swap(edge.first, edge.second);
-                        edges.insert(edge);
-                    }
-                    break;
-                case ElementType::Quadrilateral:
-                    // 四边形单元有4条边
-                    for (size_t i = 0; i < 4; ++i) {
-                        size_t next = (i + 1) % 4;
-                        std::pair<int, int> edge(nodes[i]->getId(), nodes[next]->getId());
-                        if (edge.first > edge.second) std::swap(edge.first, edge.second);
-                        edges.insert(edge);
-                    }
-                    break;
-                case ElementType::Tetrahedron:
-                    // 四面体单元有6条边
-                    for (size_t i = 0; i < 4; ++i) {
-                        for (size_t j = i + 1; j < 4; ++j) {
-                            std::pair<int, int> edge(nodes[i]->getId(), nodes[j]->getId());
-                            if (edge.first > edge.second) std::swap(edge.first, edge.second);
-                            edges.insert(edge);
-                        }
-                    }
-                    break;
-                case ElementType::Hexahedron:
-                    // 六面体单元有12条边
-                    // 底面4条边
-                    for (size_t i = 0; i < 4; ++i) {
-                        size_t next = (i + 1) % 4;
-                        std::pair<int, int> edge(nodes[i]->getId(), nodes[next]->getId());
-                        if (edge.first > edge.second) std::swap(edge.first, edge.second);
-                        edges.insert(edge);
-                    }
-                    // 顶面4条边
-                    for (size_t i = 4; i < 8; ++i) {
-                        size_t next = (i + 1) % 4 + 4;
-                        std::pair<int, int> edge(nodes[i]->getId(), nodes[next]->getId());
-                        if (edge.first > edge.second) std::swap(edge.first, edge.second);
-                        edges.insert(edge);
-                    }
-                    // 垂直边4条
-                    for (size_t i = 0; i < 4; ++i) {
-                        std::pair<int, int> edge(nodes[i]->getId(), nodes[i+4]->getId());
-                        if (edge.first > edge.second) std::swap(edge.first, edge.second);
-                        edges.insert(edge);
-                    }
-                    break;
-            }
-        }
-        
-        // 为每条边分配自由度
+        // 使用Mesh类提供的边信息
+        const auto& edges = mesh_.getEdges();
         total_dofs_ = edges.size() * dofs_per_entity_;
-        int edge_index = 0;
-        for (const auto& edge : edges) {
-            // 创建边ID（基于节点ID）
-            int edge_id = edge.first * 10000 + edge.second;
-            edge_dof_map_[edge_id] = edge_index * dofs_per_entity_;
-            edge_index++;
+        
+        for (size_t i = 0; i < edges.size(); ++i) {
+            edge_dof_map_[edges[i]->id] = static_cast<int>(i * dofs_per_entity_);
         }
     }
 
     void DofManager::buildFaceDofMap() {
-        // 实现面自由度映射
-        // 需要遍历所有单元并识别唯一的面
-        std::set<std::set<int>> faces;
-        
-        for (const auto& elem : mesh_.getElements()) {
-            const auto& nodes = elem->getNodes();
-            // 根据单元类型确定面
-            switch (elem->getType()) {
-                case ElementType::Triangle:
-                case ElementType::Quadrilateral:
-                    // 2D单元的面就是单元本身
-                    {
-                        std::set<int> face_nodes;
-                        for (const auto& node : nodes) {
-                            face_nodes.insert(node->getId());
-                        }
-                        faces.insert(face_nodes);
-                    }
-                    break;
-                case ElementType::Tetrahedron:
-                    // 四面体单元有4个面
-                    // 面0: 节点 0,1,2
-                    {
-                        std::set<int> face_nodes = {nodes[0]->getId(), nodes[1]->getId(), nodes[2]->getId()};
-                        faces.insert(face_nodes);
-                    }
-                    // 面1: 节点 0,1,3
-                    {
-                        std::set<int> face_nodes = {nodes[0]->getId(), nodes[1]->getId(), nodes[3]->getId()};
-                        faces.insert(face_nodes);
-                    }
-                    // 面2: 节点 0,2,3
-                    {
-                        std::set<int> face_nodes = {nodes[0]->getId(), nodes[2]->getId(), nodes[3]->getId()};
-                        faces.insert(face_nodes);
-                    }
-                    // 面3: 节点 1,2,3
-                    {
-                        std::set<int> face_nodes = {nodes[1]->getId(), nodes[2]->getId(), nodes[3]->getId()};
-                        faces.insert(face_nodes);
-                    }
-                    break;
-                case ElementType::Hexahedron:
-                    // 六面体单元有6个面
-                    // 底面: 节点 0,1,2,3
-                    {
-                        std::set<int> face_nodes = {nodes[0]->getId(), nodes[1]->getId(), nodes[2]->getId(), nodes[3]->getId()};
-                        faces.insert(face_nodes);
-                    }
-                    // 顶面: 节点 4,5,6,7
-                    {
-                        std::set<int> face_nodes = {nodes[4]->getId(), nodes[5]->getId(), nodes[6]->getId(), nodes[7]->getId()};
-                        faces.insert(face_nodes);
-                    }
-                    // 前面: 节点 0,1,5,4
-                    {
-                        std::set<int> face_nodes = {nodes[0]->getId(), nodes[1]->getId(), nodes[5]->getId(), nodes[4]->getId()};
-                        faces.insert(face_nodes);
-                    }
-                    // 后面: 节点 3,2,6,7
-                    {
-                        std::set<int> face_nodes = {nodes[3]->getId(), nodes[2]->getId(), nodes[6]->getId(), nodes[7]->getId()};
-                        faces.insert(face_nodes);
-                    }
-                    // 左面: 节点 0,3,7,4
-                    {
-                        std::set<int> face_nodes = {nodes[0]->getId(), nodes[3]->getId(), nodes[7]->getId(), nodes[4]->getId()};
-                        faces.insert(face_nodes);
-                    }
-                    // 右面: 节点 1,2,6,5
-                    {
-                        std::set<int> face_nodes = {nodes[1]->getId(), nodes[2]->getId(), nodes[6]->getId(), nodes[5]->getId()};
-                        faces.insert(face_nodes);
-                    }
-                    break;
-                default:
-                    break;
-            }
-        }
-        
-        // 为每个面分配自由度
+        // 使用Mesh类提供的面信息
+        const auto& faces = mesh_.getFaces();
         total_dofs_ = faces.size() * dofs_per_entity_;
-        int face_index = 0;
-        for (const auto& face : faces) {
-            // 创建面ID（基于节点ID的哈希）
-            int face_id = 0;
-            for (int node_id : face) {
-                face_id = face_id * 12512515 + node_id;  // 简单的哈希算法
-            }
-            face_dof_map_[face_id] = face_index * dofs_per_entity_;
-            face_index++;
+        
+        for (size_t i = 0; i < faces.size(); ++i) {
+            face_dof_map_[faces[i]->id] = static_cast<int>(i * dofs_per_entity_);
         }
     }
 
