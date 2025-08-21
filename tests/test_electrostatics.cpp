@@ -180,6 +180,8 @@ TEST_F(TestElectrostatics, SolveElectrostaticsOnImportedMesh) {
                         EXPECT_NEAR(computed_value, reference_value, 0.02)
                             << "Potential at node " << i << " differs significantly";
                     }
+                    // 打印对应的结果和参考结果数值
+                    std::cout << "Node " << i << ": computed=" << computed_value << ", reference=" << reference_value << std::endl;
                 } else {
                     error_count++;
                 }
