@@ -37,8 +37,8 @@ namespace FEM {
         }
         
         // 添加边界信息
-        mesh->addBoundaryNode("left_end", 0);
-        mesh->addBoundaryNode("right_end", num_elements);
+        mesh->addBoundaryNode("left", 0);
+        mesh->addBoundaryNode("right", num_elements);
         
         return mesh;
     }
@@ -69,9 +69,23 @@ namespace FEM {
             }
         }
         
-        // 添加边界信息（简化处理）
-        mesh->addBoundaryNode("left_end", 0);
-        mesh->addBoundaryNode("right_end", nx);
+        // 添加边界信息 - 完善边界命名
+        // 底边 (y=0)
+        for (int i = 0; i <= nx; ++i) {
+            mesh->addBoundaryNode("bottom", i);
+        }
+        // 顶边 (y=height)
+        for (int i = 0; i <= nx; ++i) {
+            mesh->addBoundaryNode("top", ny * (nx + 1) + i);
+        }
+        // 左边 (x=0)
+        for (int j = 0; j <= ny; ++j) {
+            mesh->addBoundaryNode("left", j * (nx + 1));
+        }
+        // 右边 (x=width)
+        for (int j = 0; j <= ny; ++j) {
+            mesh->addBoundaryNode("right", j * (nx + 1) + nx);
+        }
         
         return mesh;
     }
@@ -113,9 +127,28 @@ namespace FEM {
             }
         }
         
-        // 添加边界信息（简化处理）
-        mesh->addBoundaryNode("left_end", 0);
-        mesh->addBoundaryNode("right_end", nx);
+        // 添加边界信息 - 完善边界命名
+        // x方向的两个面
+        for (int k = 0; k <= nz; ++k) {
+            for (int j = 0; j <= ny; ++j) {
+                mesh->addBoundaryNode("left", k * (nx + 1) * (ny + 1) + j * (nx + 1)); // x=0面
+                mesh->addBoundaryNode("right", k * (nx + 1) * (ny + 1) + j * (nx + 1) + nx); // x=width面
+            }
+        }
+        // y方向的两个面
+        for (int k = 0; k <= nz; ++k) {
+            for (int i = 0; i <= nx; ++i) {
+                mesh->addBoundaryNode("front", k * (nx + 1) * (ny + 1) + i); // y=0面
+                mesh->addBoundaryNode("back", k * (nx + 1) * (ny + 1) + ny * (nx + 1) + i); // y=height面
+            }
+        }
+        // z方向的两个面
+        for (int j = 0; j <= ny; ++j) {
+            for (int i = 0; i <= nx; ++i) {
+                mesh->addBoundaryNode("bottom", j * (nx + 1) + i); // z=0面
+                mesh->addBoundaryNode("top", nz * (nx + 1) * (ny + 1) + j * (nx + 1) + i); // z=depth面
+            }
+        }
         
         return mesh;
     }

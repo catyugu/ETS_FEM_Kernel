@@ -24,20 +24,25 @@ namespace FEM {
 
                 for (size_t q = 0; q < fe_face_values.n_quad_points(); ++q) {
                     fe_face_values.reinit(q);
-                    const auto& N = fe_face_values.N();
-                    K_elem_bc += h_ * N * N.transpose() * fe_face_values.JxW();
-                    F_elem_bc += h_ * T_inf_ * N * fe_face_values.JxW();
+                    double JxW = fe_face_values.JxW();
+                    
+                    for (size_t i = 0; i < face_element.getNumNodes(); ++i) {
+                        for (size_t j = 0; j < face_element.getNumNodes(); ++j) {
+                            // Cauchy BC: h * ∫(N_i * N_j) dS
+                            K_elem_bc(i, j) += h_ * fe_face_values.shape_value(i, q) * fe_face_values.shape_value(j, q) * JxW;
+                        }
+                        // Cauchy BC: h * T_inf * ∫(N_i) dS
+                        F_elem_bc(i) += h_ * T_inf_ * fe_face_values.shape_value(i, q) * JxW;
+                    }
                 }
 
-                std::vector<int> dofs(face_element.getNumNodes());
+                // 将局部矩阵和向量映射到全局系统
                 for (size_t i = 0; i < face_element.getNumNodes(); ++i) {
-                    dofs[i] = dof_manager.getNodeDof(face_element.getNodeId(i), 0);
-                }
-
-                for (size_t i = 0; i < face_element.getNumNodes(); ++i) {
-                    F_global(dofs[i]) += F_elem_bc(i);
+                    int global_i = dof_manager.getNodeDof(face_element.getNodeId(i), 0);
+                    F_global(global_i) += F_elem_bc(i);
                     for (size_t j = 0; j < face_element.getNumNodes(); ++j) {
-                        K_global.coeffRef(dofs[i], dofs[j]) += K_elem_bc(i, j);
+                        int global_j = dof_manager.getNodeDof(face_element.getNodeId(j), 0);
+                        K_global.coeffRef(global_i, global_j) += K_elem_bc(i, j);
                     }
                 }
             }
@@ -45,8 +50,11 @@ namespace FEM {
         
         BCType getType() const override { return BCType::Cauchy; }
 
+        double getH() const { return h_; }
+        double getTInf() const { return T_inf_; }
+
     private:
-        double h_;
-        double T_inf_;
+        double h_;      // 传热系数
+        double T_inf_;  // 环境温度
     };
 }

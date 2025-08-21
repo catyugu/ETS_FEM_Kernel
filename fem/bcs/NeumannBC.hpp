@@ -19,25 +19,27 @@ namespace FEM {
                 const Element& face_element = *elem_ptr;
                 FEFaceValues fe_face_values(face_element, 1, AnalysisType::SCALAR_DIFFUSION);
                 Eigen::VectorXd F_elem_bc = Eigen::VectorXd::Zero(face_element.getNumNodes());
-
+                
                 for (size_t q = 0; q < fe_face_values.n_quad_points(); ++q) {
                     fe_face_values.reinit(q);
-                    const auto& N = fe_face_values.N();
-                    F_elem_bc += N * value_ * fe_face_values.JxW();
+                    double JxW = fe_face_values.JxW();
+                    for (size_t i = 0; i < face_element.getNumNodes(); ++i) {
+                        // Neumann BC: 面积分 ∫(value * N_i) dS
+                        F_elem_bc(i) += value_ * fe_face_values.shape_value(i, q) * JxW;
+                    }
                 }
                 
-                std::vector<int> dofs(face_element.getNumNodes());
+                // 将局部向量映射到全局向量
                 for (size_t i = 0; i < face_element.getNumNodes(); ++i) {
-                    dofs[i] = dof_manager.getNodeDof(face_element.getNodeId(i), 0);
-                }
-
-                for (size_t i = 0; i < face_element.getNumNodes(); ++i) {
-                    F_global(dofs[i]) += F_elem_bc(i);
+                    int global_dof = dof_manager.getNodeDof(face_element.getNodeId(i), 0);
+                    F_global(global_dof) += F_elem_bc(i);
                 }
             }
         }
         
         BCType getType() const override { return BCType::Neumann; }
+
+        double getValue() const { return value_; }
 
     private:
         double value_;
