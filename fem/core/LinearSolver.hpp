@@ -5,6 +5,7 @@
 #include <Eigen/IterativeLinearSolvers>
 #include <stdexcept>
 #include "utils/SimpleLogger.hpp"
+#include <complex>
 
 namespace FEM {
 
@@ -25,9 +26,10 @@ namespace FEM {
          * @brief 使用指定的求解器求解线性系统 Ax = b
          * @param A 稀疏矩阵 (系数矩阵)
          * @param b 向量 (右端项)
-         * @return Eigen::VectorXd 求解得到的解向量 x
+         * @return Eigen::Matrix 求解得到的解向量 x
          */
-        Eigen::VectorXd solve(const Eigen::SparseMatrix<double>& A, const Eigen::VectorXd& b) const {
+        template<typename TScalar>
+        Eigen::Matrix<TScalar, Eigen::Dynamic, 1> solve(const Eigen::SparseMatrix<TScalar>& A, const Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& b) const {
             switch (type_) {
                 case SolverType::SparseLU:
                     return solveWithSparseLU(A, b);
@@ -43,11 +45,12 @@ namespace FEM {
          * @brief 使用 Eigen 的稀疏 LU 分解求解线性系统 Ax = b
          * @param A 稀疏矩阵 (系数矩阵)
          * @param b 向量 (右端项)
-         * @return Eigen::VectorXd 求解得到的解向量 x
+         * @return Eigen::Matrix 求解得到的解向量 x
          */
-        Eigen::VectorXd solveWithSparseLU(const Eigen::SparseMatrix<double>& A, const Eigen::VectorXd& b) const {
+        template<typename TScalar>
+        Eigen::Matrix<TScalar, Eigen::Dynamic, 1> solveWithSparseLU(const Eigen::SparseMatrix<TScalar>& A, const Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& b) const {
             // 创建一个 LU 分解求解器
-            Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
+            Eigen::SparseLU<Eigen::SparseMatrix<TScalar>> solver;
 
             // 分解矩阵 A
             solver.compute(A);
@@ -57,7 +60,7 @@ namespace FEM {
             }
 
             // 求解 Ax = b
-            Eigen::VectorXd x = solver.solve(b);
+            Eigen::Matrix<TScalar, Eigen::Dynamic, 1> x = solver.solve(b);
             if (solver.info() != Eigen::Success) {
                 // 求解失败
                 throw std::runtime_error("Eigen::SparseLU solving failed.");
@@ -70,11 +73,12 @@ namespace FEM {
          * @brief 使用共轭梯度法求解线性系统 Ax = b
          * @param A 稀疏矩阵 (系数矩阵)
          * @param b 向量 (右端项)
-         * @return Eigen::VectorXd 求解得到的解向量 x
+         * @return Eigen::Matrix 求解得到的解向量 x
          */
-        Eigen::VectorXd solveWithConjugateGradient(const Eigen::SparseMatrix<double>& A, const Eigen::VectorXd& b) const {
+        template<typename TScalar>
+        Eigen::Matrix<TScalar, Eigen::Dynamic, 1> solveWithConjugateGradient(const Eigen::SparseMatrix<TScalar>& A, const Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& b) const {
             // 创建共轭梯度求解器
-            Eigen::ConjugateGradient<Eigen::SparseMatrix<double>, Eigen::Lower|Eigen::Upper> solver;
+            Eigen::ConjugateGradient<Eigen::SparseMatrix<TScalar>, Eigen::Lower|Eigen::Upper> solver;
 
             // 设置求解器参数
             solver.setMaxIterations(1000);
@@ -88,7 +92,7 @@ namespace FEM {
             }
 
             // 求解 Ax = b
-            Eigen::VectorXd x = solver.solve(b);
+            Eigen::Matrix<TScalar, Eigen::Dynamic, 1> x = solver.solve(b);
             if (solver.info() != Eigen::Success) {
                 // 求解失败
                 throw std::runtime_error("ConjugateGradient solving failed.");

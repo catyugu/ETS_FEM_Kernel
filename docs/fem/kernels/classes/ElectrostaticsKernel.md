@@ -7,15 +7,20 @@
 ## 类签名
 
 ```cpp
-template<int TDim, int TNumNodes>
-class ElectrostaticsKernel : public Kernel<TDim, TNumNodes> {
+template<int TDim, int TNumNodes, typename TScalar = double>
+class ElectrostaticsKernel : public Kernel<TDim, TNumNodes, TScalar> {
 public:
     explicit ElectrostaticsKernel(const Material& material);
     
-    Eigen::Matrix<double, TNumNodes, TNumNodes>
+    Eigen::Matrix<TScalar, TNumNodes, TNumNodes>
     compute_element_matrix(const Element& element) override;
 };
 ```
+
+**模板参数:**
+- `TDim` - 问题的空间维度
+- `TNumNodes` - 单元节点数量
+- `TScalar` - 标量类型，默认为double，也可支持std::complex<double>等类型
 
 ## 构造函数
 
@@ -37,7 +42,7 @@ explicit ElectrostaticsKernel(const Material& material);
 ### compute_element_matrix
 
 ```cpp
-Eigen::Matrix<double, TNumNodes, TNumNodes>
+Eigen::Matrix<TScalar, TNumNodes, TNumNodes>
 compute_element_matrix(const Element& element) override;
 ```
 
@@ -49,12 +54,9 @@ compute_element_matrix(const Element& element) override;
 **返回值**: 单元局部刚度矩阵
 
 **计算公式**: 
-K_e = ∫(B^T * σ * B) dV
+K_e = ∫(B^T * D * B) dV
 
-其中:
-- B 是应变-位移矩阵（在标量问题中是形函数梯度）
-- σ 是电导率
-- 积分在单元域内进行
+其中 B 是梯度算子矩阵，D 是材料属性矩阵。
 
 ## 示例用法
 

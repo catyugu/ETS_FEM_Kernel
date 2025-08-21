@@ -1,61 +1,49 @@
-# FEM::Physics Namespace
-
-物理场命名空间，包含各种物理问题的实现。
+# fem::physics 命名空间
 
 ## 概述
 
-Physics命名空间提供了各种物理场问题的抽象和具体实现，支持热传导、静电场等物理现象的数值模拟。
+`fem::physics` 命名空间包含各种物理场问题的实现。这些类负责管理特定物理问题的内核并执行全局矩阵组装。
+
+与之前版本相比，该命名空间中的类现在实现了单元类型过滤机制，确保只有适当类型的单元参与域内组装。
 
 ## 类列表
 
-### 基础类
-- [PhysicsField](classes/PhysicsField.md) - 物理场抽象基类
+### [PhysicsField](classes/PhysicsField.md)
 
-### 具体物理场实现
-- [HeatTransfer](classes/HeatTransfer.md) - 热传导物理场
-- [Electrostatics](classes/Electrostatics.md) - 静电场物理场
+所有物理场问题的抽象基类。定义了物理场问题必须实现的接口，包括组装全局矩阵和向量、应用边界条件等方法。
 
-## 设计原则
+### [HeatTransfer](classes/HeatTransfer.md)
 
-1. **面向接口编程**：通过PhysicsField基类提供统一接口
-2. **可扩展性**：易于添加新的物理场类型
-3. **边界条件集成**：物理场类管理其相关的边界条件
-4. **多物理场支持**：支持多个物理场的耦合求解
+热传导物理问题的实现。负责管理热传导分析的内核并执行全局矩阵组装。与之前版本相比，该类现在实现了单元类型过滤机制，确保只有适当类型的单元参与域内组装。
 
-## 边界条件管理
+### [Electrostatics](classes/Electrostatics.md)
 
-物理场类通过以下方法管理边界条件：
+静电场物理问题的实现。用于计算在给定边界条件下的电势分布。与之前版本相比，该类现在实现了单元类型过滤机制，确保只有适当类型的单元参与域内组装。
 
-```cpp
-// 添加边界条件
-physics->addBoundaryCondition(std::make_unique<DirichletBC<3>>("boundary_name", value));
+## 设计模式
 
-// 获取边界条件
-const auto& boundary_conditions = physics->getBoundaryConditions();
+该命名空间使用了以下设计模式：
 
-// 应用自然边界条件（Neumann和Cauchy）
-physics->applyNaturalBCs(mesh, dof_manager, K_global, F_global);
-```
+1. **模板方法模式**: [PhysicsField](classes/PhysicsField.md) 基类定义了物理场问题的接口，具体实现由派生类完成。
+2. **策略模式**: 通过内核机制，可以在运行时选择不同的内核实现。
+3. **抽象工厂模式**: 通过 [addKernel](classes/HeatTransfer.md) 方法，可以创建和管理不同类型的内核。
 
-## 使用示例
+## 依赖关系
 
-```cpp
-// 创建热传导物理场
-auto heat_physics = std::make_unique<HeatTransfer<3>>();
+- [fem::kernels](../kernels/README.md) - 物理内核
+- [fem::mesh](../mesh/README.md) - 网格数据结构
+- [fem::core](../core/README.md) - 核心有限元计算组件
+- [fem::bcs](../bcs/README.md) - 边界条件
+- Eigen - 矩阵运算库
 
-// 添加计算核
-heat_physics->addKernel(std::make_unique<HeatDiffusionKernel<3, 8>>(material));
+## 更新说明
 
-// 添加边界条件
-heat_physics->addBoundaryCondition(
-    std::make_unique<DirichletBC<3>>("inlet", 300.0)
-);
-heat_physics->addBoundaryCondition(
-    std::make_unique<NeumannBC<3>>("outlet", 0.0)
-);
+与之前版本相比，该命名空间的主要变化包括：
 
-// 创建问题并求解
-Problem<3> problem(std::move(mesh), std::move(heat_physics));
-problem.assemble();
-problem.solve();
-```
+1. 实现了单元类型过滤机制，确保只有适当类型的单元参与域内组装
+2. 添加了 [shouldAssembleElement](classes/HeatTransfer.md) 方法，用于判断单元是否应该参与组装
+3. 移除了硬编码的节点数
+4. 可以处理混合网格，即同时包含不同类型和节点数的单元
+5. 根据问题维度自动过滤参与组装的单元类型
+
+这些改进使得物理场可以处理混合网格，即同时包含不同类型和节点数的单元，并确保只有适当类型的单元参与计算，提高了代码的通用性和可扩展性。

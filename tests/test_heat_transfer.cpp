@@ -59,7 +59,7 @@ TEST_F(TestHeatTransfer, SolveHeatTransferOnImportedMesh) {
 
         constexpr int num_nodes_per_elem = 4;
         physics->addKernel(
-            std::make_unique<HeatDiffusionKernel<dim, num_nodes_per_elem>>(*material)
+            std::make_unique<HeatDiffusionKernel<dim>>(*material)
         );
 
         const auto& nodes = mesh->getNodes();

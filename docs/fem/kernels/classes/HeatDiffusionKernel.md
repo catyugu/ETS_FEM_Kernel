@@ -4,18 +4,17 @@
 
 `HeatDiffusionKernel` 类是热传导问题的物理内核实现，继承自 [Kernel](Kernel.md) 基类。该类负责计算热传导问题的单元刚度矩阵，是有限元热分析的核心计算组件。
 
-与之前版本相比，该类现在负责构建B矩阵（应变-位移矩阵或标量问题的梯度算子），而不是依赖 [FEValues](../../core/classes/FEValues.md) 类提供。
+与之前版本相比，该类现在负责构建B矩阵（应变-位移矩阵或标量问题的梯度算子），而不是依赖 [FEValues](../../core/classes/FEValues.md) 类提供。同时，该类现在支持动态节点数的单元。
 
 ## 类定义
 
 ```cpp
-template<int TDim, int TNumNodes>
-class HeatDiffusionKernel : public Kernel<TDim, TNumNodes>
-```
+template<int TDim, typename TScalar = double>
+class HeatDiffusionKernel : public Kernel<TDim, TScalar>
 
 **模板参数:**
 - `TDim` - 问题的空间维度
-- `TNumNodes` - 单元节点数量
+- `TScalar` - 标量类型，默认为 `double`，也可支持 `std::complex<double>` 等类型
 
 ## 构造函数
 
@@ -28,7 +27,7 @@ class HeatDiffusionKernel : public Kernel<TDim, TNumNodes>
 
 ## 成员函数
 
-### Eigen::Matrix<double, TNumNodes, TNumNodes> compute_element_matrix(const Element& element) override
+### Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> compute_element_matrix(const Element& element) override
 
 计算热传导问题的单元刚度矩阵。
 
@@ -36,7 +35,7 @@ class HeatDiffusionKernel : public Kernel<TDim, TNumNodes>
 - `element` - 要计算单元矩阵的单元对象
 
 **返回值:**
-- 热传导问题的单元刚度矩阵，大小为 [TNumNodes](file:///E:/code/cpp/ETS_FEM_Kernel/fem/kernels/HeatDiffusionKernel.hpp#L17) x [TNumNodes](file:///E:/code/cpp/ETS_FEM_Kernel/fem/kernels/HeatDiffusionKernel.hpp#L17)
+- 热传导问题的单元刚度矩阵，大小为动态矩阵
 
 ## 示例用法
 
@@ -45,7 +44,7 @@ class HeatDiffusionKernel : public Kernel<TDim, TNumNodes>
 FEM::Material material;
 
 // 创建热传导内核
-FEM::HeatDiffusionKernel<2, 3> kernel(material);
+FEM::HeatDiffusionKernel<2> kernel(material);
 
 // 假设有一个单元对象
 FEM::Element& element = ...;
@@ -56,7 +55,15 @@ auto element_matrix = kernel.compute_element_matrix(element);
 
 ## 实现细节
 
-`HeatDiffusionKernel` 类实现了热传导问题的有限元计算。其核心计算基于以下公式：
+与之前版本相比，该类的主要变化包括：
+
+1. 移除了模板参数中的单元节点数，现在支持任意节点数的单元
+2. 单元矩阵的大小在运行时根据单元的实际节点数确定
+3. 循环边界也根据实际节点数动态确定
+
+这些改进使得内核可以处理混合网格，即同时包含不同类型和节点数的单元。
+
+该实现使用 [FEValues](../../core/classes/FEValues.md) 类来计算形函数梯度和几何信息，并从材料属性中获取热导率。与之前版本相比，B矩阵的构建现在在该类内部完成，而不是在 [FEValues](../../core/classes/FEValues.md) 类中。核心计算仍然基于以下公式：
 
 K_elem += B^T * D * B * dV
 
@@ -65,14 +72,12 @@ K_elem += B^T * D * B * dV
 - D 是材料属性矩阵（对于热传导问题，是一个标量，即热导率）
 - dV 是体积微元（通过雅可比行列式和积分权重计算）
 
-该实现使用 [FEValues](../../core/classes/FEValues.md) 类来计算形函数梯度和几何信息，并从材料属性中获取热导率。与之前版本相比，B矩阵的构建现在在该类内部完成，而不是在 [FEValues](../../core/classes/FEValues.md) 类中。
-
 这种设计使得 [FEValues](../../core/classes/FEValues.md) 类更加通用，可以适用于不同类型的物理问题，而每个Kernel可以根据自己的需要构建相应的B矩阵。
 
 ## 依赖关系
 
 - [Kernel](Kernel.md) - 基类
 - [Material](../../materials/classes/Material.md) - 材料属性
-- [FEValues](../../core/classes/FEValues.md) - 有限元值计算
 - [Element](../../mesh/classes/Element.md) - 单元数据结构
+- [FEValues](../../core/classes/FEValues.md) - 有限元值计算
 - Eigen - 矩阵运算库

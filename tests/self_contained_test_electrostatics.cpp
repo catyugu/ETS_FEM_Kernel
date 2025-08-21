@@ -13,10 +13,10 @@ template<int dim>
 void test_electrostatics() {
     auto mesh = FEM::Mesh::create_uniform_1d_mesh(1.0, 10);
     auto material = std::make_unique<FEM::Material>("Copper");
-    material->setProperty("electrical_conductivity", 1.0);
+    material->setProperty("permittivity", 1.0);
 
     auto physics = std::make_unique<FEM::Electrostatics<dim>>();
-    physics->addKernel(std::make_unique<FEM::ElectrostaticsKernel<dim, 2>>(*material));
+    physics->addKernel(std::make_unique<FEM::ElectrostaticsKernel<dim>>(*material));
 
     // 使用物理场管理边界条件 - 修改为正确的边界名称
     physics->addBoundaryCondition(
@@ -41,7 +41,7 @@ class ElectrostaticsTest : public ::testing::Test {
 protected:
     void SetUp() override {
         material = std::make_unique<FEM::Material>("Copper");
-        material->setProperty("electrical_conductivity", 8.854187817e-12); // 真空介电常数
+        material->setProperty("permittivity", 8.854187817e-12); // 真空介电常数
     }
     std::unique_ptr<FEM::Material> material;
 };
@@ -59,12 +59,12 @@ TEST_F(ElectrostaticsTest, Solves2DProblem) {
 
     auto mesh = FEM::Mesh::create_uniform_2d_mesh(1.0, 1.0, nx, ny);
     auto material = std::make_unique<FEM::Material>("Copper");
-    material->setProperty("electrical_conductivity", 1.0);
+    material->setProperty("permittivity", 1.0);
     
     auto physics = std::make_unique<FEM::Electrostatics<dim>>();
 
     physics->addKernel(
-        std::make_unique<FEM::ElectrostaticsKernel<dim, num_nodes_per_elem>>(*material)
+        std::make_unique<FEM::ElectrostaticsKernel<dim>>(*material)
     );
 
     // 使用物理场管理边界条件 - 修改为正确的边界名称
@@ -95,12 +95,12 @@ TEST_F(ElectrostaticsTest, Solves3DProblem) {
 
     auto mesh = FEM::Mesh::create_uniform_3d_mesh(1.0, 1.0, 1.0, nx, ny, nz);
     auto material = std::make_unique<FEM::Material>("Copper");
-    material->setProperty("electrical_conductivity", 1.0);
+    material->setProperty("permittivity", 1.0);
     
     auto physics = std::make_unique<FEM::Electrostatics<dim>>();
 
     physics->addKernel(
-        std::make_unique<FEM::ElectrostaticsKernel<dim, num_nodes_per_elem>>(*material)
+        std::make_unique<FEM::ElectrostaticsKernel<dim>>(*material)
     );
 
     // 使用物理场管理边界条件

@@ -25,7 +25,7 @@ int main() {
 
     // 4. 将 Kernels 添加到物理场
     heat_physics->addKernel(
-        std::make_unique<FEM::HeatDiffusionKernel<problem_dim, 2>>(copper)
+        std::make_unique<FEM::HeatDiffusionKernel<problem_dim>>(copper)
     );
 
     // 5. 【新方式】创建边界条件对象，并添加到物理场

@@ -1,82 +1,88 @@
-# 文档摘要
+# 文档索引
 
-本文档提供了 ETS_FEM_Kernel 项目的完整文档索引，方便用户快速查找所需信息。
+## 命名空间
 
-## 命名空间文档
+### [fem](fem/README.md)
 
-### fem 命名空间
-[fem 命名空间](fem/README.md) - 有限元方法内核的主要命名空间
+#### 核心模块
 
-子命名空间:
-- [fem::core](fem/core/README.md) - 核心计算类
-- [fem::io](fem/io/README.md) - 输入输出模块
-- [fem::kernels](fem/kernels/README.md) - 物理内核
-- [fem::materials](fem/materials/README.md) - 材料属性
-- [fem::mesh](fem/mesh/README.md) - 网格结构
-- [fem::physics](fem/physics/README.md) - 物理问题接口
-- [fem::bcs](fem/bcs/README.md) - 边界条件实现
+- [core](fem/core/README.md)
+  - 类:
+    - [DofManager](fem/core/classes/DofManager.md)
+    - [FEValues](fem/core/classes/FEValues.md)
+    - [LinearSolver](fem/core/classes/LinearSolver.md)
+    - [Problem](fem/core/classes/Problem.md)
+    - [ReferenceElement](fem/core/classes/ReferenceElement.md)
 
-### utils 命名空间
-[utils 命名空间](utils/README.md) - 工具类
+- [kernels](fem/kernels/README.md)
+  - 类:
+    - [Kernel](fem/kernels/classes/Kernel.md)
+    - [HeatDiffusionKernel](fem/kernels/classes/HeatDiffusionKernel.md)
+    - [HeatCapacityKernel](fem/kernels/classes/HeatCapacityKernel.md)
+    - [ElectrostaticsKernel](fem/kernels/classes/ElectrostaticsKernel.md)
+    - [KernelWrappers](fem/kernels/classes/KernelWrappers.md)
 
-## 核心类文档
+- [materials](fem/materials/README.md)
+  - 类:
+    - [Material](fem/materials/classes/Material.md)
+    - [MaterialProperty](fem/materials/classes/MaterialProperty.md)
 
-### fem::core 命名空间类
+- [mesh](fem/mesh/README.md)
+  - 类:
+    - [Element](fem/mesh/classes/Element.md)
+    - [Mesh](fem/mesh/classes/Mesh.md)
+    - [Node](fem/mesh/classes/Node.md)
 
-- [DofManager](fem/core/classes/DofManager.md) - 自由度管理器
-- [FEValues](fem/core/classes/FEValues.md) - 有限元值计算器
-- [FEFaceValues](fem/core/classes/FEFaceValues.md) - 面单元值计算器
-- [FiniteElement](fem/core/classes/FiniteElement.md) - 有限单元类
-- [LinearSolver](fem/core/classes/LinearSolver.md) - 线性求解器
-- [Problem](fem/core/classes/Problem.md) - 问题定义基类
-- [ReferenceElement](fem/core/classes/ReferenceElement.md) - 参考单元类
-- [BoundaryCondition](fem/core/classes/BoundaryCondition.md) - 边界条件基类
+- [physics](fem/physics/README.md)
+  - 类:
+    - [PhysicsField](fem/physics/classes/PhysicsField.md)
+    - [HeatTransfer](fem/physics/classes/HeatTransfer.md)
+    - [Electrostatics](fem/physics/classes/Electrostatics.md)
 
-### fem::io 命名空间类
+- [bcs](fem/bcs/README.md)
+  - 类:
+    - [BoundaryCondition](fem/bcs/classes/BoundaryCondition.md)
+    - [DirichletBC](fem/bcs/classes/DirichletBC.md)
+    - [NeumannBC](fem/bcs/classes/NeumannBC.md)
+    - [CauchyBC](fem/bcs/classes/CauchyBC.md)
 
-- [Exporter](fem/io/classes/Exporter.md) - 数据导出器
-- [Importer](fem/io/classes/Importer.md) - 数据导入器
+- [io](fem/io/README.md)
+  - 类:
+    - [Exporter](fem/io/classes/Exporter.md)
+    - [Importer](fem/io/classes/Importer.md)
 
-### fem::kernels 命名空间类
+#### 工具模块
 
-- [Kernel](fem/kernels/classes/Kernel.md) - 内核基类
-- [HeatDiffusionKernel](fem/kernels/classes/HeatDiffusionKernel.md) - 热传导内核
-- [ElectrostaticsKernel](fem/kernels/classes/ElectrostaticsKernel.md) - 静电场内核
-- [KernelWrappers](fem/kernels/classes/KernelWrappers.md) - 内核包装器
+### [utils](utils/README.md)
 
-### fem::materials 命名空间类
+- 类:
+  - [Profiler](utils/classes/Profiler.md)
+  - [Quadrature](utils/classes/Quadrature.md)
+  - [ShapeFunctions](utils/classes/ShapeFunctions.md)
+  - [SimpleLogger](utils/classes/SimpleLogger.md)
 
-- [Material](fem/materials/classes/Material.md) - 材料类
-- [MaterialProperty](fem/materials/classes/MaterialProperty.md) - 材料属性类
+## 更新日志
 
+### 重大更新 - 泛型设计重构
 
-### fem::bcs 命名空间类
+1. **Kernel 类重构**
+   - 移除了模板参数中的 `TNumNodes_`
+   - 使用动态大小矩阵替代固定大小矩阵
+   - 支持任意节点数的单元
 
-- [DirichletBC](fem/bcs/classes/DirichletBC.md) - Dirichlet边界条件
-- [NeumannBC](fem/bcs/classes/NeumannBC.md) - Neumann边界条件
-- [CauchyBC](fem/bcs/classes/CauchyBC.md) - Cauchy边界条件
+2. **具体 Kernel 实现更新**
+   - [HeatDiffusionKernel](fem/kernels/classes/HeatDiffusionKernel.md)、[HeatCapacityKernel](fem/kernels/classes/HeatCapacityKernel.md) 和 [ElectrostaticsKernel](fem/kernels/classes/ElectrostaticsKernel.md) 移除了 `TNumNodes` 模板参数
+   - 支持运行时确定单元节点数
+   - 矩阵大小和循环边界动态化
 
-### fem::mesh 命名空间类
+3. **PhysicsField 类更新**
+   - [HeatTransfer](fem/physics/classes/HeatTransfer.md) 和 [Electrostatics](fem/physics/classes/Electrostatics.md) 类实现了单元类型过滤机制
+   - 添加了 `shouldAssembleElement` 方法，确保只有适当类型的单元参与域内组装
+   - 移除了硬编码的节点数
 
-- [Element](fem/mesh/classes/Element.md) - 单元类
-- [Mesh](fem/mesh/classes/Mesh.md) - 网格类
+4. **混合网格支持**
+   - 内核现在可以处理混合网格，即同时包含不同类型和节点数的单元
+   - 根据问题维度自动过滤参与组装的单元类型
+   - 提高了代码的通用性和可扩展性
 
-### fem::physics 命名空间类
-
-- [PhysicsField](fem/physics/classes/PhysicsField.md) - 物理场基类
-- [HeatTransfer](fem/physics/classes/HeatTransfer.md) - 热传导物理场
-- [Electrostatics](fem/physics/classes/Electrostatics.md) - 静电场物理场
-
-### utils 命名空间类
-
-- [InterpolationUtilities](utils/classes/InterpolationUtilities.md) - 插值工具类
-- [Profiler](utils/classes/Profiler.md) - 性能分析器
-- [Quadrature](utils/classes/Quadrature.md) - 积分规则类
-- [ShapeFunctions](utils/classes/ShapeFunctions.md) - 形函数类
-- [SimpleLogger](utils/classes/SimpleLogger.md) - 简单日志类
-
-## 开发文档
-
-- [项目概述](../README.md) - 项目简介和使用指南
-- [项目规范](../PROMPT.md) - 开发规范和约定
-- [开发计划](../PLAN.md) - 未来开发计划和优化方向
+这些更改使有限元内核更加通用，能够处理不同类型的单元（混合网格），而不仅限于特定节点数的单元，符合项目的设计目标。

@@ -31,6 +31,16 @@ namespace FEM {
             }
             throw std::out_of_range("Node index out of range");
         }
+        
+        // 添加获取所有节点ID的方法
+        std::vector<int> getNodeIds() const {
+            std::vector<int> node_ids;
+            node_ids.reserve(nodes_.size());
+            for (const auto& node : nodes_) {
+                node_ids.push_back(node->getId());
+            }
+            return node_ids;
+        }
 
         // 新增：纯虚函数，强制所有子类实现类型返回
         virtual ElementType getType() const = 0;

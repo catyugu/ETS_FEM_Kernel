@@ -1,75 +1,97 @@
 #include "Exporter.hpp"
-#include <fstream>
-#include <stdexcept>
+#include <iomanip>
+#include <complex>
 
-// --- 关键修正：包含 Problem 类的完整定义 ---
-#include "../core/Problem.hpp"
+namespace FEM {
+    namespace IO {
+        
+        template<int TDim, typename TScalar>
+        void Exporter::write_vtk(const std::string& filename, const Problem<TDim, TScalar>& problem) {
+            std::ofstream file(filename);
+            if (!file.is_open()) {
+                throw std::runtime_error("Cannot open file for writing: " + filename);
+            }
 
-namespace FEM::IO {
+            // VTK 头部
+            file << "# vtk DataFile Version 3.0\n";
+            file << "FEM Solution\n";
+            file << "ASCII\n";
+            file << "DATASET UNSTRUCTURED_GRID\n";
 
-template<int TDim>
-void Exporter::write_vtk(const std::string& filename, const Problem<TDim>& problem) {
-    std::ofstream vtk_file(filename);
-    if (!vtk_file.is_open()) {
-        throw std::runtime_error("Could not open file for writing: " + filename);
-    }
-
-    // 现在编译器知道了 Problem 类的完整定义，可以安全地调用这些方法
-    const auto& mesh = problem.getMesh();
-    const auto& solution = problem.getSolution();
-    const auto& nodes = mesh.getNodes();
-    const auto& elements = mesh.getElements();
-
-    // 1. VTK Header
-    vtk_file << "# vtk DataFile Version 3.0\n";
-    vtk_file << "FEM Simulation Results\n";
-    vtk_file << "ASCII\n";
-    vtk_file << "DATASET UNSTRUCTURED_GRID\n";
-
-    // 2. Points (Node Coordinates)
-    vtk_file << "POINTS " << nodes.size() << " double\n";
-    for (const auto& node : nodes) {
-        const auto& coords = node->getCoords();
-        vtk_file << coords[0] << " " << (coords.size() > 1 ? coords[1] : 0.0) << " " << (coords.size() > 2 ? coords[2] : 0.0) << "\n";
-    }
-
-    // 3. Cells (Element Connectivity)
-    size_t total_cell_list_size = 0;
-    for (const auto& elem : elements) {
-        total_cell_list_size += elem->getNumNodes() + 1;
-    }
-    vtk_file << "CELLS " << elements.size() << " " << total_cell_list_size << "\n";
-    for (const auto& elem : elements) {
-        vtk_file << elem->getNumNodes();
-        for (const auto& node : elem->getNodes()) {
-            vtk_file << " " << node->getId();
+            // 写入网格和解数据
+            write_mesh_data(file, problem);
+            write_solution_data(file, problem);
         }
-        vtk_file << "\n";
-    }
+        
+        template<int TDim, typename TScalar>
+        void Exporter::write_mesh_data(std::ofstream& file, const Problem<TDim, TScalar>& problem) {
+            const auto& mesh = problem.getMesh();
+            const auto& nodes = mesh.getNodes();
+            const auto& elements = mesh.getElements();
 
-    // 4. Cell Types
-    vtk_file << "CELL_TYPES " << elements.size() << "\n";
-    for (const auto& elem : elements) {
-        // VTK Cell Type codes: 3=Line, 5=Triangle, 10=Tetrahedron
-        if (elem->getNumNodes() == 2) vtk_file << "3\n";
-        else if (elem->getNumNodes() == 3) vtk_file << "5\n";
-        else if (elem->getNumNodes() == 4) vtk_file << "10\n";
-        else vtk_file << "1\n"; // Vertex for unknown
-    }
+            // 写入节点
+            file << "POINTS " << nodes.size() << " double\n";
+            for (const auto& node_ptr : nodes) {
+                const auto& node = *node_ptr;
+                if constexpr (TDim == 1) {
+                    file << std::setprecision(10) << node.getX() << " 0.0 0.0\n";
+                } else if constexpr (TDim == 2) {
+                    file << std::setprecision(10) << node.getX() << " " << node.getY() << " 0.0\n";
+                } else {
+                    file << std::setprecision(10) << node.getX() << " " << node.getY() << " " << node.getZ() << "\n";
+                }
+            }
 
-    // 5. Point Data (Nodal Solution)
-    vtk_file << "POINT_DATA " << nodes.size() << "\n";
-    vtk_file << "SCALARS Temperature double 1\n";
-    vtk_file << "LOOKUP_TABLE default\n";
-    for (size_t i = 0; i < nodes.size(); ++i) {
-        // 假设解向量的索引与节点ID是一致的
-        vtk_file << solution(i) << "\n";
+            // 写入单元
+            file << "\nCELLS " << elements.size() << " " << elements.size() * (TDim + 2) << "\n";
+            for (const auto& elem_ptr : elements) {
+                const auto& elem = *elem_ptr;
+                const auto& node_ids = elem.getNodeIds();
+                file << (TDim + 1);
+                for (const auto& node_id : node_ids) {
+                    file << " " << node_id;
+                }
+                file << "\n";
+            }
+
+            // 写入单元类型
+            file << "\nCELL_TYPES " << elements.size() << "\n";
+            for (size_t i = 0; i < elements.size(); ++i) {
+                // 5 = VTK_TRIANGLE, 10 = VTK_TETRA
+                file << (TDim == 2 ? 5 : 10) << "\n";
+            }
+        }
+        
+        template<int TDim, typename TScalar>
+        void Exporter::write_solution_data(std::ofstream& file, const Problem<TDim, TScalar>& problem) {
+            const auto& mesh = problem.getMesh();
+            const auto& solution = problem.getSolution();
+            const auto& dof_manager = problem.getDofManager();
+            const auto& nodes = mesh.getNodes();
+
+            // 写入点数据
+            file << "\nPOINT_DATA " << nodes.size() << "\n";
+
+            // 写入标量解（温度或电势）
+            file << "SCALARS solution double 1\n";
+            file << "LOOKUP_TABLE default\n";
+            for (size_t i = 0; i < nodes.size(); ++i) {
+                int dof_index = dof_manager.getNodeDof(nodes[i]->getId(), 0);
+                if constexpr (std::is_same_v<TScalar, std::complex<double>>) {
+                    // 对于复数，输出模
+                    file << std::setprecision(10) << std::abs(solution[dof_index]) << "\n";
+                } else {
+                    file << std::setprecision(10) << solution[dof_index] << "\n";
+                }
+            }
+        }
+        
+        // 显式实例化定义
+        template void Exporter::write_vtk<1, double>(const std::string&, const Problem<1, double>&);
+        template void Exporter::write_vtk<2, double>(const std::string&, const Problem<2, double>&);
+        template void Exporter::write_vtk<3, double>(const std::string&, const Problem<3, double>&);
+        template void Exporter::write_vtk<1, std::complex<double>>(const std::string&, const Problem<1, std::complex<double>>&);
+        template void Exporter::write_vtk<2, std::complex<double>>(const std::string&, const Problem<2, std::complex<double>>&);
+        template void Exporter::write_vtk<3, std::complex<double>>(const std::string&, const Problem<3, std::complex<double>>&);
     }
 }
-
-// 显式实例化模板函数，以避免链接错误
-template void Exporter::write_vtk<1>(const std::string&, const Problem<1>&);
-template void Exporter::write_vtk<2>(const std::string&, const Problem<2>&);
-template void Exporter::write_vtk<3>(const std::string&, const Problem<3>&);
-
-} // namespace FEM::IO

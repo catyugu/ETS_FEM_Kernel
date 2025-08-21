@@ -1,59 +1,56 @@
 #pragma once
-#include <vector>
-#include <memory>
-#include <Eigen/Sparse>
+
+#include "Kernel.hpp"
 #include "../mesh/Element.hpp"
 #include "../core/DofManager.hpp"
-#include "Kernel.hpp"
+#include <Eigen/Sparse>
+#include <memory>
+#include <complex>
 
 namespace FEM {
 
     /**
      * @brief 内核抽象接口
-     * 
-     * 定义所有内核都需要实现的接口，隐藏模板参数 TNumNodes
+     * @tparam TDim 问题维度
      */
-    template<int TDim>
+    template<int TDim, typename TScalar = double>
     class IKernel {
     public:
         virtual ~IKernel() = default;
-        virtual void assemble_element(const Element& element, Eigen::SparseMatrix<double>& K_global, const DofManager& dof_manager) = 0;
+        virtual void assemble_element(const Element& element, Eigen::SparseMatrix<TScalar>& K_global, const DofManager& dof_manager) = 0;
     };
 
     /**
      * @brief 内核包装器
-     * 
-     * 模板化的包装器，实现 IKernel 接口，用于包装具体的 Kernel 实现
+     * @tparam TDim 问题维度
      */
-    template<int TDim, int TNumNodes>
-    class KernelWrapper : public IKernel<TDim> {
+    template<int TDim, typename TScalar = double>
+    class KernelWrapper : public IKernel<TDim, TScalar> {
     public:
-        explicit KernelWrapper(std::unique_ptr<Kernel<TDim, TNumNodes>> kernel) : kernel_(std::move(kernel)) {}
+        explicit KernelWrapper(std::unique_ptr<Kernel<TDim, TScalar>> kernel) : kernel_(std::move(kernel)) {}
 
-        void assemble_element(const Element& element, Eigen::SparseMatrix<double>& K_global, const DofManager& dof_manager) override {
-            // 只为节点数匹配的单元执行组装
-            if (element.getNumNodes() != TNumNodes) return;
-
-            Eigen::MatrixXd K_elem_dense = kernel_->compute_element_matrix(element);
-
-            // 获取单元自由度
-            std::vector<int> dofs;
-            const auto& nodes = element.getNodes();
-            dofs.reserve(nodes.size());
+        void assemble_element(const Element& element, Eigen::SparseMatrix<TScalar>& K_global, const DofManager& dof_manager) override {
+            // 计算单元矩阵
+            auto K_elem = kernel_->compute_element_matrix(element);
             
-            for (const auto& node : nodes) {
-                int dof = dof_manager.getNodeDof(node->getId(), 0);
-                if (dof >= 0) dofs.push_back(dof);
+            // 获取单元节点数
+            const int num_nodes = element.getNumNodes();
+
+            // 获取单元的自由度索引
+            std::vector<int> dof_indices(num_nodes);
+            for (int i = 0; i < num_nodes; ++i) {
+                dof_indices[i] = dof_manager.getNodeDof(element.getNodeId(i), 0);
             }
-            
-            for (size_t i = 0; i < dofs.size(); ++i) {
-                for (size_t j = 0; j < dofs.size(); ++j) {
-                    K_global.coeffRef(dofs[i], dofs[j]) += K_elem_dense(i, j);
+
+            // 组装到全局矩阵
+            for (int i = 0; i < num_nodes; ++i) {
+                for (int j = 0; j < num_nodes; ++j) {
+                    K_global.coeffRef(dof_indices[i], dof_indices[j]) += K_elem(i, j);
                 }
             }
         }
-    private:
-        std::unique_ptr<Kernel<TDim, TNumNodes>> kernel_;
-    };
 
-} // namespace FEM
+    private:
+        std::unique_ptr<Kernel<TDim, TScalar>> kernel_;
+    };
+}

@@ -2,6 +2,7 @@
 #include <Eigen/Sparse>
 #include <vector>
 #include <memory>
+#include <complex>
 #include "../mesh/Mesh.hpp"
 #include "../core/DofManager.hpp"
 #include "../core/BoundaryCondition.hpp" // 引入新头文件
@@ -13,7 +14,7 @@ namespace FEM {
      * 
      * 定义所有物理场都需要实现的接口，为多物理场耦合提供统一接口
      */
-    template<int TDim>
+    template<int TDim, typename TScalar = double>
     class PhysicsField {
     public:
         virtual ~PhysicsField() = default;
@@ -26,7 +27,7 @@ namespace FEM {
          * @param F_global 全局载荷向量
          */
         virtual void assemble_volume(const Mesh& mesh, const DofManager& dof_manager,
-                              Eigen::SparseMatrix<double>& K_global, Eigen::VectorXd& F_global) = 0;
+                              Eigen::SparseMatrix<TScalar>& K_global, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) = 0;
 
         /**
          * @brief 应用"自然"边界条件 (Neumann, Cauchy)
@@ -36,7 +37,7 @@ namespace FEM {
          * @param F_global 全局载荷向量
          */
         void applyNaturalBCs(const Mesh& mesh, const DofManager& dof_manager,
-                             Eigen::SparseMatrix<double>& K_global, Eigen::VectorXd& F_global) const {
+                             Eigen::SparseMatrix<TScalar>& K_global, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const {
             for (const auto& bc : boundary_conditions_) {
                 if (bc->getType() != BCType::Dirichlet) {
                     bc->apply(mesh, dof_manager, K_global, F_global);
@@ -44,11 +45,11 @@ namespace FEM {
             }
         }
         
-        void addBoundaryCondition(std::unique_ptr<BoundaryCondition<TDim>> bc) {
+        void addBoundaryCondition(std::unique_ptr<BoundaryCondition<TDim, TScalar>> bc) {
             boundary_conditions_.push_back(std::move(bc));
         }
 
-        const std::vector<std::unique_ptr<BoundaryCondition<TDim>>>& getBoundaryConditions() const {
+        const std::vector<std::unique_ptr<BoundaryCondition<TDim, TScalar>>>& getBoundaryConditions() const {
             return boundary_conditions_;
         }
 
@@ -59,7 +60,7 @@ namespace FEM {
         virtual std::string getName() const = 0;
 
     private:
-        std::vector<std::unique_ptr<BoundaryCondition<TDim>>> boundary_conditions_;
+        std::vector<std::unique_ptr<BoundaryCondition<TDim, TScalar>>> boundary_conditions_;
     };
 
 } // namespace FEM

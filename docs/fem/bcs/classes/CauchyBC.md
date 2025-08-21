@@ -5,9 +5,13 @@ Cauchy边界条件类，用于实现Robin型边界条件，如对流换热边界
 ## 类签名
 
 ```cpp
-template<int TDim>
-class CauchyBC : public BoundaryCondition<TDim>
+template<int TDim, typename TScalar = double>
+class CauchyBC : public BoundaryCondition<TDim, TScalar>
 ```
+
+**模板参数:**
+- `TDim` - 问题的空间维度
+- `TScalar` - 标量类型，默认为double，也可支持std::complex<double>等类型
 
 ## 概述
 
@@ -16,7 +20,7 @@ class CauchyBC : public BoundaryCondition<TDim>
 ## 构造函数
 
 ```cpp
-CauchyBC(const std::string& boundary_name, double h_val, double T_inf_val)
+CauchyBC(const std::string& boundary_name, TScalar h_val, TScalar T_inf_val)
 ```
 
 ### 参数
@@ -33,10 +37,24 @@ CauchyBC(const std::string& boundary_name, double h_val, double T_inf_val)
 
 ```cpp
 void apply(const Mesh& mesh, const DofManager& dof_manager,
-           Eigen::SparseMatrix<double>& K_global, Eigen::VectorXd& F_global) const override
+           Eigen::SparseMatrix<TScalar>& K_global, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const override;
 ```
 
-该方法在边界单元上进行积分，同时修改全局刚度矩阵和载荷向量。
+### getH
+
+获取换热系数。
+
+```cpp
+TScalar getH() const { return h_; }
+```
+
+### getTInf
+
+获取环境值。
+
+```cpp
+TScalar getTInf() const { return T_inf_; }
+```
 
 ### getType
 

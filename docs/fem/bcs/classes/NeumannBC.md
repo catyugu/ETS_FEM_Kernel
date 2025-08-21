@@ -5,9 +5,13 @@ Neumann边界条件类，用于指定边界上的法向通量或梯度。
 ## 类签名
 
 ```cpp
-template<int TDim>
-class NeumannBC : public BoundaryCondition<TDim>
+template<int TDim, typename TScalar = double>
+class NeumannBC : public BoundaryCondition<TDim, TScalar>
 ```
+
+**模板参数:**
+- `TDim` - 问题的空间维度
+- `TScalar` - 标量类型，默认为double，也可支持std::complex<double>等类型
 
 ## 概述
 
@@ -16,7 +20,7 @@ class NeumannBC : public BoundaryCondition<TDim>
 ## 构造函数
 
 ```cpp
-NeumannBC(const std::string& boundary_name, double value)
+NeumannBC(const std::string& boundary_name, TScalar value)
 ```
 
 ### 参数
@@ -32,10 +36,16 @@ NeumannBC(const std::string& boundary_name, double value)
 
 ```cpp
 void apply(const Mesh& mesh, const DofManager& dof_manager,
-           Eigen::SparseMatrix<double>& K_global, Eigen::VectorXd& F_global) const override
+           Eigen::SparseMatrix<TScalar>& K_global, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const override;
 ```
 
-该方法在边界单元上进行积分，计算通量对载荷向量的贡献。
+### getValue
+
+获取边界条件的值。
+
+```cpp
+TScalar getValue() const { return value_; }
+```
 
 ### getType
 
