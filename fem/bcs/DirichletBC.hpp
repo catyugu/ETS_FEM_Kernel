@@ -1,23 +1,24 @@
 #pragma once
 
 #include "../core/BoundaryCondition.hpp"
+#include <complex>
 
 namespace FEM {
-    template<int TDim>
-    class DirichletBC : public BoundaryCondition<TDim> {
+    template<int TDim, typename TScalar = double>
+    class DirichletBC : public BoundaryCondition<TDim, TScalar> {
     public:
-        DirichletBC(const std::string& boundary_name, double value)
-            : BoundaryCondition<TDim>(boundary_name), value_(value) {}
+        DirichletBC(const std::string& boundary_name, TScalar value)
+            : BoundaryCondition<TDim, TScalar>(boundary_name), value_(value) {}
 
         // 留空，由 Problem 类统一处理
         void apply(const Mesh& mesh, const DofManager& dof_manager,
-                   Eigen::SparseMatrix<double>& K_global, Eigen::VectorXd& F_global) const override {}
+                   Eigen::SparseMatrix<TScalar>& K_global, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const override {}
         
         BCType getType() const override { return BCType::Dirichlet; }
 
-        double getValue() const { return value_; }
+        TScalar getValue() const { return value_; }
 
     private:
-        double value_;
+        TScalar value_;
     };
 }

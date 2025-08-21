@@ -2,16 +2,18 @@
 #include "Kernel.hpp"
 #include "../materials/Material.hpp"
 #include "../core/FEValues.hpp"
+#include <complex>
 
 namespace FEM {
-    template<int TDim, int TNumNodes>
-    class ElectrostaticsKernel : public Kernel<TDim, TNumNodes> {
+    template<int TDim, int TNumNodes, typename TScalar = double>
+    class ElectrostaticsKernel : public Kernel<TDim, TNumNodes, TScalar> {
     public:
+        using MatrixType = typename Kernel<TDim, TNumNodes, TScalar>::MatrixType;
+
         explicit ElectrostaticsKernel(const Material& material) : mat_(material) {}
 
-        Eigen::Matrix<double, TNumNodes, TNumNodes>
-        compute_element_matrix(const Element& element) override {
-            Eigen::Matrix<double, TNumNodes, TNumNodes> K_elem;
+        MatrixType compute_element_matrix(const Element& element) override {
+            MatrixType K_elem;
             K_elem.setZero();
 
             // FEValues现在需要知道分析类型
@@ -33,10 +35,10 @@ namespace FEM {
                 const auto& dN_dx = fe_values.dN_dx();
                 Eigen::MatrixXd B = dN_dx;
 
-                double D = sigma;              // 获取D矩阵 (标量)
+                TScalar D = static_cast<TScalar>(sigma);              // 获取D矩阵 (标量)
 
                 // --- 通用形式： K_elem += B^T * D * B * dV ---
-                K_elem += (B.transpose() * D * B) * fe_values.JxW();
+                K_elem += (B.transpose() * D * B) * static_cast<TScalar>(fe_values.JxW());
             }
             return K_elem;
         }
