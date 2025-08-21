@@ -8,6 +8,11 @@
 #include <string>
 #include <stdexcept>
 
+void trim(std::string &s) {
+    s.erase(0, s.find_first_not_of(" \t\n\r"));
+    s.erase(s.find_last_not_of(" \t\n\r") + 1);
+}
+
 namespace FEM::IO {
     std::unique_ptr<Mesh> Importer::read_comsol_mphtxt(const std::string &filename) {
         std::ifstream file(filename);
@@ -19,171 +24,150 @@ namespace FEM::IO {
         std::string line;
         int num_nodes = 0;
 
-        // 首先找到节点数量
+        const std::map<std::string, int> vertices_per_element_map = {
+            {"vtx", 1}, {"edg", 2}, {"tri", 3}, {"tet", 4},
+        };
+
+        // --- Parser state flags ---
+        bool reading_nodes = false;
+        bool reading_elements = false;
+        bool next_line_is_element_type = false; // Flag to handle two-line element type definition
+
+        std::string current_element_type_str;
+        int current_vertices_per_element = 0;
+        int num_elements_to_read = 0;
+
         while (std::getline(file, line)) {
-            line.erase(0, line.find_first_not_of(" \t"));
-            line.erase(line.find_last_not_of(" \t") + 1);
+            trim(line);
+            if (line.empty()) continue;
 
-            if (line.empty() || line[0] == '%') continue;
-
-            if (line.find("# number of mesh vertices") != std::string::npos) {
-                // 找到节点数量所在的行
+            // --- State machine for parsing element blocks ---
+            if (next_line_is_element_type) {
                 std::stringstream ss(line);
-                ss >> num_nodes; // 读取节点数量
-                break;
-            }
-        }
+                int dummy_prefix;
+                std::string type_string_with_comment;
 
-        // 重新定位到文件开始，重新读取
-        file.clear();
-        file.seekg(0, std::ios::beg);
+                ss >> dummy_prefix >> type_string_with_comment; // Reads "3", then "vtx"
 
-        bool in_vertex_coordinates = false;
-        int nodes_read = 0;
+                // Remove trailing comment from the type name if it exists
+                size_t comment_pos = type_string_with_comment.find('#');
+                if (comment_pos != std::string::npos) {
+                    current_element_type_str = type_string_with_comment.substr(0, comment_pos);
+                    trim(current_element_type_str);
+                } else {
+                    current_element_type_str = type_string_with_comment;
+                }
 
-        // 解析节点坐标
-        while (std::getline(file, line) && nodes_read < num_nodes) {
-            line.erase(0, line.find_first_not_of(" \t"));
-            line.erase(line.find_last_not_of(" \t") + 1);
-
-            if (line.empty() || line[0] == '%') continue;
-
-            // 检查是否是节点坐标部分开始
-            if (line.find("# Mesh vertex coordinates") != std::string::npos) {
-                in_vertex_coordinates = true;
+                auto it = vertices_per_element_map.find(current_element_type_str);
+                if (it != vertices_per_element_map.end()) {
+                    current_vertices_per_element = it->second;
+                } else {
+                    current_element_type_str.clear(); // Unsupported type
+                }
+                next_line_is_element_type = false;
                 continue;
             }
 
-            // 如果在节点坐标部分，读取坐标
-            if (in_vertex_coordinates) {
+            // --- Check for section headers and markers ---
+            if (line.find("# number of mesh vertices") != std::string::npos) {
+                std::stringstream ss(line);
+                ss >> num_nodes;
+                continue;
+            }
+            if (line.find("# Mesh vertex coordinates") != std::string::npos) {
+                if (num_nodes == 0) {
+                    throw std::runtime_error("Vertex coordinates section found before number of vertices was defined.");
+                }
+                reading_nodes = true;
+                continue;
+            }
+            if (line.find("# Type #") != std::string::npos) {
+                // This line is a marker. The next non-empty line contains the element type name.
+                next_line_is_element_type = true;
+                reading_elements = false;
+                num_elements_to_read = 0;
+                current_vertices_per_element = 0;
+                current_element_type_str.clear();
+                continue;
+            }
+            if (line.find("# number of elements") != std::string::npos) {
+                if (current_element_type_str.empty()) continue; // Skip if we don't have a valid type
+                std::stringstream ss(line);
+                ss >> num_elements_to_read;
+                continue;
+            }
+            if (line.find("# Elements") != std::string::npos) {
+                // This is the header right before the element index data starts.
+                if (num_elements_to_read > 0) {
+                    reading_elements = true;
+                }
+                continue;
+            }
+
+            // Ignore any other lines that are just comments
+            if (line[0] == '#') {
+                continue;
+            }
+
+            // --- Read data based on the current state ---
+            if (reading_nodes) {
+                if (mesh->getNodes().size() >= static_cast<size_t>(num_nodes)) {
+                    reading_nodes = false;
+                    continue;
+                }
                 std::stringstream ss(line);
                 double x, y, z;
-                if (ss >> x >> y >> z) {
-                    mesh->addNode(std::make_unique<Node>(nodes_read, std::vector<double>{x, y, z}));
-                    nodes_read++;
+                int dummy_prefix;
+
+                // Handle both "x y z" and "prefix x y z" formats
+                std::streampos original_pos = ss.tellg();
+                if (ss >> dummy_prefix >> x >> y >> z) {
+                    // Successfully read "prefix x y z"
+                } else {
+                    ss.clear();
+                    ss.seekg(original_pos);
+                    ss >> x >> y >> z; // Retry reading "x y z"
                 }
+                mesh->addNode(std::make_unique<Node>(mesh->getNodes().size(), std::vector<double>{x, y, z}));
+            } else if (reading_elements) {
+                if (num_elements_to_read <= 0) {
+                    reading_elements = false;
+                    continue;
+                }
+
+                std::stringstream ss(line);
+                std::vector<int> node_indices(current_vertices_per_element);
+                for (int i = 0; i < current_vertices_per_element; ++i) {
+                    if (!(ss >> node_indices[i])) {
+                        throw std::runtime_error("Error reading element node indices.");
+                    }
+                }
+
+                std::vector<Node *> element_nodes;
+                element_nodes.reserve(current_vertices_per_element);
+                for (int idx: node_indices) {
+                    if (idx >= num_nodes || idx < 0) {
+                        throw std::runtime_error("Invalid node index found in element definition.");
+                    }
+                    element_nodes.push_back(mesh->getNodes()[idx].get());
+                }
+
+                if (current_element_type_str == "vtx") {
+                    mesh->addElement(std::make_unique<PointElement>(mesh->getElements().size(), element_nodes));
+                } else if (current_element_type_str == "edg") {
+                    mesh->addElement(std::make_unique<LineElement>(mesh->getElements().size(), element_nodes));
+                } else if (current_element_type_str == "tri") {
+                    mesh->addElement(std::make_unique<TriElement>(mesh->getElements().size(), element_nodes));
+                } else if (current_element_type_str == "tet") {
+                    mesh->addElement(std::make_unique<TetraElement>(mesh->getElements().size(), element_nodes));
+                }
+                num_elements_to_read--;
             }
         }
 
-        // 重新定位到文件开始，解析单元
-        file.clear();
-        file.seekg(0, std::ios::beg);
-
-        bool in_elements_section = false;
-        int vertices_per_element = 0;
-        int num_elements = 0;
-        std::string element_type;
-
-        while (std::getline(file, line)) {
-            line.erase(0, line.find_first_not_of(" \t"));
-            line.erase(line.find_last_not_of(" \t") + 1);
-
-            if (line.empty() || line[0] == '%') continue;
-
-            // 检查是否进入单元部分
-            if (line.find("# number of element types") != std::string::npos) {
-                in_elements_section = true;
-                continue;
-            }
-
-            // 检查单元类型
-            if (in_elements_section) {
-                // 查找单元类型名称
-                if (line.find("edg") != std::string::npos) {
-                    element_type = "edg";
-                    vertices_per_element = 2; // 边单元
-                    continue;
-                } else if (line.find("tri") != std::string::npos) {
-                    element_type = "tri";
-                    vertices_per_element = 3; // 三角形单元
-                    continue;
-                } else if (line.find("tet") != std::string::npos) {
-                    element_type = "tet";
-                    vertices_per_element = 4; // 四面体单元
-                    continue;
-                } else if (line.find("vtx") != std::string::npos) {
-                    element_type = "vtx";
-                    vertices_per_element = 1; // 顶点单元
-                    continue;
-                }
-
-                // 读取每个单元的顶点数
-                if (line.find("# number of vertices per element") != std::string::npos) {
-                    continue;
-                }
-
-                // 读取单元数量
-                if (line.find("# number of elements") != std::string::npos) {
-                    std::stringstream ss(line);
-                    ss >> num_elements;
-                    continue;
-                }
-
-                // 处理单元索引
-                if (num_elements > 0 && vertices_per_element > 0 && line.find("#") == std::string::npos && !line.
-                    empty()) {
-                    std::stringstream ss(line);
-                    std::vector<int> node_indices(vertices_per_element);
-                    bool valid = true;
-
-                    // 读取节点索引
-                    for (int i = 0; i < vertices_per_element; i++) {
-                        if (!(ss >> node_indices[i])) {
-                            valid = false;
-                            break;
-                        }
-                    }
-
-                    if (valid) {
-                        bool indices_valid = true;
-                        for (int i = 0; i < vertices_per_element; i++) {
-                            if (node_indices[i] >= static_cast<int>(mesh->getNodes().size()) ||
-                                node_indices[i] < 0) {
-                                indices_valid = false;
-                                break;
-                            }
-                        }
-
-                        if (indices_valid) {
-                            // 创建相应类型的单元
-                            if (vertices_per_element == 1) {
-                                // 顶点单元
-                                mesh->addElement(std::make_unique<PointElement>(mesh->getElements().size(), std::vector<Node*>{
-                                                                      mesh->getNodes()[node_indices[0]].get()
-                                                                  })
-                                );
-                            } else if (vertices_per_element == 2) {
-                                // 边单元
-                                mesh->addElement(std::make_unique<LineElement>(mesh->getElements().size(), std::vector<Node*>{
-                                                                     mesh->getNodes()[node_indices[0]].get(),
-                                                                     mesh->getNodes()[node_indices[1]].get()
-                                                                 }));
-                            } else if (vertices_per_element == 3) {
-                                // 三角形单元
-                                mesh->addElement(std::make_unique<TriElement>(mesh->getElements().size(), std::vector<Node*>{
-                                                                    mesh->getNodes()[node_indices[0]].get(),
-                                                                    mesh->getNodes()[node_indices[1]].get(),
-                                                                    mesh->getNodes()[node_indices[2]].get()
-                                                                }));
-                            } else if (vertices_per_element == 4) {
-                                // 四面体单元
-                                mesh->addElement(std::make_unique<TetraElement>(mesh->getElements().size(), std::vector<Node*>{
-                                                                      mesh->getNodes()[node_indices[0]].get(),
-                                                                      mesh->getNodes()[node_indices[1]].get(),
-                                                                      mesh->getNodes()[node_indices[2]].get(),
-                                                                      mesh->getNodes()[node_indices[3]].get()
-                                                                  }));
-                            }
-                        }
-                    }
-
-                    // 减少剩余需要读取的单元数
-                    num_elements--;
-                    if (num_elements <= 0) {
-                        vertices_per_element = 0;
-                    }
-                }
-            }
+        if (mesh->getNodes().size() != static_cast<size_t>(num_nodes)) {
+            std::cerr << "Warning: Expected " << num_nodes << " nodes, but read " << mesh->getNodes().size() << "." <<
+                    std::endl;
         }
 
         return mesh;
@@ -440,22 +424,29 @@ namespace FEM::IO {
             switch (type) {
                 case 5: // triangle
                     if (offset == 3) {
-                        mesh->addElement(std::make_unique<TriElement>(i, std::vector<Node*>{
-                                                            mesh->getNodes()[connectivity[conn_index]].get(),
-                                                            mesh->getNodes()[connectivity[conn_index + 1]].get(),
-                                                            mesh->getNodes()[connectivity[conn_index + 2]].get()
-                                                        }));
+                        mesh->addElement(std::make_unique<TriElement>(i, std::vector<Node *>{
+                                                                          mesh->getNodes()[connectivity[conn_index]].
+                                                                          get(),
+                                                                          mesh->getNodes()[connectivity[conn_index + 1]]
+                                                                          .get(),
+                                                                          mesh->getNodes()[connectivity[conn_index + 2]]
+                                                                          .get()
+                                                                      }));
                         conn_index += 3;
                     }
                     break;
                 case 10: // tetrahedron
                     if (offset == 4) {
-                        mesh->addElement(std::make_unique<TetraElement>(i, std::vector<Node*>{
-                                                              mesh->getNodes()[connectivity[conn_index]].get(),
-                                                              mesh->getNodes()[connectivity[conn_index + 1]].get(),
-                                                              mesh->getNodes()[connectivity[conn_index + 2]].get(),
-                                                              mesh->getNodes()[connectivity[conn_index + 3]].get()
-                                                          }));
+                        mesh->addElement(std::make_unique<TetraElement>(i, std::vector<Node *>{
+                                                                            mesh->getNodes()[connectivity[conn_index]].
+                                                                            get(),
+                                                                            mesh->getNodes()[connectivity[
+                                                                                conn_index + 1]].get(),
+                                                                            mesh->getNodes()[connectivity[
+                                                                                conn_index + 2]].get(),
+                                                                            mesh->getNodes()[connectivity[
+                                                                                conn_index + 3]].get()
+                                                                        }));
                         conn_index += 4;
                     }
                     break;
@@ -732,22 +723,29 @@ namespace FEM::IO {
             switch (type) {
                 case 5: // triangle
                     if (offset == 3) {
-                        mesh->addElement(std::make_unique<TriElement>(i, std::vector<Node*>{
-                                                            mesh->getNodes()[connectivity[conn_index]].get(),
-                                                            mesh->getNodes()[connectivity[conn_index + 1]].get(),
-                                                            mesh->getNodes()[connectivity[conn_index + 2]].get()
-                                                        }));
+                        mesh->addElement(std::make_unique<TriElement>(i, std::vector<Node *>{
+                                                                          mesh->getNodes()[connectivity[conn_index]].
+                                                                          get(),
+                                                                          mesh->getNodes()[connectivity[conn_index + 1]]
+                                                                          .get(),
+                                                                          mesh->getNodes()[connectivity[conn_index + 2]]
+                                                                          .get()
+                                                                      }));
                         conn_index += 3;
                     }
                     break;
                 case 10: // tetrahedron
                     if (offset == 4) {
-                        mesh->addElement(std::make_unique<TetraElement>(i, std::vector<Node*>{
-                                                              mesh->getNodes()[connectivity[conn_index]].get(),
-                                                              mesh->getNodes()[connectivity[conn_index + 1]].get(),
-                                                              mesh->getNodes()[connectivity[conn_index + 2]].get(),
-                                                              mesh->getNodes()[connectivity[conn_index + 3]].get()
-                                                          }));
+                        mesh->addElement(std::make_unique<TetraElement>(i, std::vector<Node *>{
+                                                                            mesh->getNodes()[connectivity[conn_index]].
+                                                                            get(),
+                                                                            mesh->getNodes()[connectivity[
+                                                                                conn_index + 1]].get(),
+                                                                            mesh->getNodes()[connectivity[
+                                                                                conn_index + 2]].get(),
+                                                                            mesh->getNodes()[connectivity[
+                                                                                conn_index + 3]].get()
+                                                                        }));
                         conn_index += 4;
                     }
                     break;

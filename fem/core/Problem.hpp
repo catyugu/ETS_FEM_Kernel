@@ -131,13 +131,13 @@ namespace FEM {
             }
 
             // ==================== FIX START ====================
-            K_global_.prune([](const typename Eigen::SparseMatrix<TScalar>::StorageIndex&,
-                               const typename Eigen::SparseMatrix<TScalar>::StorageIndex&,
-                               const TScalar& value) {
-                // The comparison must be between two double-precision floating-point numbers.
-                // std::abs(complex) returns a double (the magnitude).
-                return std::abs(value) > 1e-12;
-            });
+            // K_global_.prune([](const typename Eigen::SparseMatrix<TScalar>::StorageIndex&,
+            //                    const typename Eigen::SparseMatrix<TScalar>::StorageIndex&,
+            //                    const TScalar& value) {
+            //     // The comparison must be between two double-precision floating-point numbers.
+            //     // std::abs(complex) returns a double (the magnitude).
+            //     return std::abs(value) > 1e-12;
+            // });
             // ===================== FIX END =====================
         }
 
