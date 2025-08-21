@@ -12,12 +12,13 @@ class Exporter
 
 ## 成员函数
 
-### template<int TDim> static void write_vtk(const std::string& filename, const Problem<TDim>& problem)
+### template<int TDim, typename TScalar> static void write_vtk(const std::string& filename, const Problem<TDim, TScalar>& problem)
 
 将有限元问题的解导出为 VTK 格式的文件。
 
 **模板参数:**
 - `TDim` - 问题的空间维度
+- `TScalar` - 标量类型，支持double和std::complex<double>等类型
 
 **参数:**
 - `filename` - 输出文件的路径
@@ -28,7 +29,7 @@ class Exporter
 
 ## 示例用法
 
-```cpp
+```
 // 假设已经有一个求解完成的问题对象
 FEM::Problem<2> problem(std::move(mesh), std::move(physics));
 

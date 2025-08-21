@@ -5,9 +5,13 @@
 ## 类签名
 
 ```cpp
-template<int TDim>
+template<int TDim, typename TScalar = double>
 class BoundaryCondition
 ```
+
+**模板参数:**
+- `TDim` - 问题的空间维度
+- `TScalar` - 标量类型，默认为double，也可支持std::complex<double>等类型
 
 ## 概述
 
@@ -32,7 +36,7 @@ protected:
 
 ```cpp
 virtual void apply(const Mesh& mesh, const DofManager& dof_manager,
-                   Eigen::SparseMatrix<double>& K_global, Eigen::VectorXd& F_global) const = 0;
+                   Eigen::SparseMatrix<TScalar>& K_global, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const = 0;
 ```
 
 ### getType

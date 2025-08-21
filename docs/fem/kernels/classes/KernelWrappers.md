@@ -9,25 +9,30 @@
 ### IKernel
 
 ```cpp
-template<int TDim>
+template<int TDim, typename TScalar = double>
 class IKernel {
 public:
     virtual ~IKernel() = default;
-    virtual void assemble_element(const Element& element, Eigen::SparseMatrix<double>& K_global, const DofManager& dof_manager) = 0;
+    virtual void assemble_element(const Element& element, Eigen::SparseMatrix<TScalar>& K_global, const DofManager& dof_manager) = 0;
 };
 ```
 
 ### KernelWrapper
 
 ```cpp
-template<int TDim, int TNumNodes>
-class KernelWrapper : public IKernel<TDim> {
+template<int TDim, int TNumNodes, typename TScalar = double>
+class KernelWrapper : public IKernel<TDim, TScalar> {
 public:
-    explicit KernelWrapper(std::unique_ptr<Kernel<TDim, TNumNodes>> kernel);
+    explicit KernelWrapper(std::unique_ptr<Kernel<TDim, TNumNodes, TScalar>> kernel);
     
-    void assemble_element(const Element& element, Eigen::SparseMatrix<double>& K_global, const DofManager& dof_manager) override;
+    void assemble_element(const Element& element, Eigen::SparseMatrix<TScalar>& K_global, const DofManager& dof_manager) override;
 };
 ```
+
+**模板参数:**
+- `TDim` - 问题的空间维度
+- `TNumNodes` - 单元节点数量
+- `TScalar` - 标量类型，默认为double，也可支持std::complex<double>等类型
 
 ## IKernel 类
 
@@ -40,7 +45,7 @@ public:
 #### assemble_element
 
 ```cpp
-virtual void assemble_element(const Element& element, Eigen::SparseMatrix<double>& K_global, const DofManager& dof_manager) = 0;
+virtual void assemble_element(const Element& element, Eigen::SparseMatrix<TScalar>& K_global, const DofManager& dof_manager) = 0;
 ```
 
 **描述**: 纯虚函数，由派生类实现。负责将单个单元的局部矩阵组装到全局矩阵中。

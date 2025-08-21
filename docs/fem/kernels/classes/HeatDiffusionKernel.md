@@ -9,13 +9,14 @@
 ## 类定义
 
 ```cpp
-template<int TDim, int TNumNodes>
-class HeatDiffusionKernel : public Kernel<TDim, TNumNodes>
+template<int TDim, int TNumNodes, typename TScalar = double>
+class HeatDiffusionKernel : public Kernel<TDim, TNumNodes, TScalar>
 ```
 
 **模板参数:**
 - `TDim` - 问题的空间维度
 - `TNumNodes` - 单元节点数量
+- `TScalar` - 标量类型，默认为 `double`，也可支持 `std::complex<double>` 等类型
 
 ## 构造函数
 
@@ -28,7 +29,7 @@ class HeatDiffusionKernel : public Kernel<TDim, TNumNodes>
 
 ## 成员函数
 
-### Eigen::Matrix<double, TNumNodes, TNumNodes> compute_element_matrix(const Element& element) override
+### Eigen::Matrix<TScalar, TNumNodes, TNumNodes> compute_element_matrix(const Element& element) override
 
 计算热传导问题的单元刚度矩阵。
 

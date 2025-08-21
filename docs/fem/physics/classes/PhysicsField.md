@@ -6,29 +6,33 @@
 
 ## 类签名
 
-```cpp
-template<int TDim>
+```
+template<int TDim, typename TScalar = double>
 class PhysicsField {
 public:
     virtual ~PhysicsField() = default;
     
-    virtual void assemble(const Mesh& mesh, const DofManager& dof_manager,
-                         Eigen::SparseMatrix<double>& K_global, Eigen::VectorXd& F_global) = 0;
+    virtual void assemble_volume(const Mesh& mesh, const DofManager& dof_manager,
+                         Eigen::SparseMatrix<TScalar>& K_global, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) = 0;
                          
-    virtual void applyBoundaryConditions(const Mesh& mesh, const DofManager& dof_manager,
-                                        Eigen::SparseMatrix<double>& K_global, Eigen::VectorXd& F_global);
+    virtual void applyNaturalBCs(const Mesh& mesh, const DofManager& dof_manager,
+                                        Eigen::SparseMatrix<TScalar>& K_global, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global);
                                         
     virtual std::string getName() const = 0;
 };
 ```
 
+**模板参数:**
+- `TDim` - 问题的空间维度
+- `TScalar` - 标量类型，默认为double，也可支持std::complex<double>等类型
+
 ## 方法说明
 
-### assemble
+### assemble_volume
 
-```cpp
-virtual void assemble(const Mesh& mesh, const DofManager& dof_manager,
-                     Eigen::SparseMatrix<double>& K_global, Eigen::VectorXd& F_global) = 0;
+```
+virtual void assemble_volume(const Mesh& mesh, const DofManager& dof_manager,
+                     Eigen::SparseMatrix<TScalar>& K_global, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) = 0;
 ```
 
 **描述**: 纯虚函数，由派生类实现。负责组装全局刚度矩阵和载荷向量。
@@ -39,14 +43,14 @@ virtual void assemble(const Mesh& mesh, const DofManager& dof_manager,
 - `K_global` - 全局刚度矩阵（输出）
 - `F_global` - 全局载荷向量（输出）
 
-### applyBoundaryConditions
+### applyNaturalBCs
 
-```cpp
-virtual void applyBoundaryConditions(const Mesh& mesh, const DofManager& dof_manager,
-                                    Eigen::SparseMatrix<double>& K_global, Eigen::VectorXd& F_global);
+```
+virtual void applyNaturalBCs(const Mesh& mesh, const DofManager& dof_manager,
+                                    Eigen::SparseMatrix<TScalar>& K_global, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global);
 ```
 
-**描述**: 应用边界条件。默认实现为空，具体物理场可以重写此方法。
+**描述**: 应用自然边界条件（Neumann和Cauchy边界条件）。默认实现为空，具体物理场可以重写此方法。
 
 **参数**:
 - `mesh` - 网格对象
@@ -56,7 +60,7 @@ virtual void applyBoundaryConditions(const Mesh& mesh, const DofManager& dof_man
 
 ### getName
 
-```cpp
+```
 virtual std::string getName() const = 0;
 ```
 
@@ -66,7 +70,7 @@ virtual std::string getName() const = 0;
 
 ## 示例用法
 
-```cpp
+```
 // 创建具体的物理场实例
 auto physics = std::make_unique<FEM::HeatTransfer<2>>();
 // 或

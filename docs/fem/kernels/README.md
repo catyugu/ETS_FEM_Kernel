@@ -7,6 +7,7 @@ fem::kernels 命名空间包含了各种物理问题的计算内核，每个内�
 - [Kernel](classes/Kernel.md) - 内核基类
 - [HeatDiffusionKernel](classes/HeatDiffusionKernel.md) - 热传导内核
 - [ElectrostaticsKernel](classes/ElectrostaticsKernel.md) - 静电场内核
+- [HeatCapacityKernel](classes/HeatCapacityKernel.md) - 热容内核（频域分析）
 - [KernelWrappers](classes/KernelWrappers.md) - 内核包装器
 
 ## 概述

@@ -7,12 +7,13 @@
 ## 类定义
 
 ```cpp
-template<int TDim>
-class HeatTransfer
+template<int TDim, typename TScalar = double>
+class HeatTransfer : public PhysicsField<TDim, TScalar>
 ```
 
 **模板参数:**
 - `TDim` - 问题的空间维度
+- `TScalar` - 标量类型，默认为 `double`，也可支持 `std::complex<double>` 等类型
 
 ## 成员函数
 
@@ -26,7 +27,7 @@ class HeatTransfer
 **参数:**
 - `kernel` - 内核对象的智能指针
 
-### void assemble(const Mesh& mesh, const DofManager& dof_manager, Eigen::SparseMatrix<double>& K_global, Eigen::VectorXd& F_global)
+### void assemble_volume(const Mesh& mesh, const DofManager& dof_manager, Eigen::SparseMatrix<TScalar>& K_global, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global)
 
 组装全局刚度矩阵和载荷向量。
 
@@ -62,16 +63,3 @@ Eigen::SparseMatrix<double> K_global;
 Eigen::VectorXd F_global;
 heat_transfer->assemble(*mesh, dof_manager, K_global, F_global);
 ```
-
-## 实现细节
-
-`HeatTransfer` 类通过抽象接口和模板包装器的设计模式解决了不同单元类型支持的问题。[IKernel](../../kernels/classes/KernelWrappers.md) 抽象接口隐藏了单元节点数量的模板参数，而 [KernelWrapper](../../kernels/classes/KernelWrappers.md) 模板类则将具体的内核实现包装成统一接口。
-
-组装过程中，遍历所有单元和内核，对于节点数匹配的单元-内核组合执行单元矩阵计算和全局矩阵组装。
-
-## 依赖关系
-
-- [Kernel](../../kernels/classes/Kernel.md) - 内核基类
-- [Mesh](../../mesh/classes/Mesh.md) - 网格类
-- [DofManager](../../core/classes/DofManager.md) - 自由度管理器
-- Eigen - 稀疏矩阵运算库

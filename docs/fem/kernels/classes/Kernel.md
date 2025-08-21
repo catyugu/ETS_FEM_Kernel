@@ -7,13 +7,14 @@
 ## 类定义
 
 ```cpp
-template<int TDim, int TNumNodes_>
+template<int TDim, int TNumNodes_, typename TScalar = double>
 class Kernel
 ```
 
 **模板参数:**
 - `TDim` - 问题的空间维度
 - `TNumNodes_` - 单元节点数量
+- `TScalar` - 标量类型，默认为double，也可支持std::complex<double>等类型
 
 ## 成员函数
 
@@ -21,7 +22,7 @@ class Kernel
 
 虚析构函数，确保通过基类指针删除派生类对象时能正确调用派生类的析构函数。
 
-### virtual Eigen::Matrix<double, TNumNodes_, TNumNodes_> compute_element_matrix(const Element& element) = 0
+### virtual Eigen::Matrix<TScalar, TNumNodes_, TNumNodes_> compute_element_matrix(const Element& element) = 0
 
 纯虚函数，计算单元矩阵。具体实现由派生类提供。
 
@@ -29,7 +30,7 @@ class Kernel
 - `element` - 要计算单元矩阵的单元对象
 
 **返回值:**
-- 单元矩阵，大小为 [TNumNodes_](file:///E:/code/cpp/ETS_FEM_Kernel/fem/kernels/Kernel.hpp#L10) x [TNumNodes_](file:///E:/code/cpp/ETS_FEM_Kernel/fem/kernels/Kernel.hpp#L10)
+- 单元矩阵，大小为 `TNumNodes_`x `TNumNodes_`
 
 ## 静态成员
 
