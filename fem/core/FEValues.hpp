@@ -81,10 +81,17 @@ namespace FEM {
                 }
 
                 // 存储JxW和dN_dx
+                // JxW是雅可比行列式的绝对值乘以积分权重，用于数值积分
                 all_JxW_.push_back(std::abs(detJ) * finite_element_->getQuadWeight(q));
+                // dN_dx是形函数在物理空间中的梯度，仅使用未加权的雅可比矩阵逆进行计算
                 Eigen::MatrixXd dN_dx = jacobian.inverse() * dN_dxi;
                 all_dN_dx_.push_back(dN_dx);
             }
+        }
+        
+        // 新增构造函数：自动根据单元类型选择推荐的积分阶数
+        FEValues(const Element& elem, AnalysisType analysis_type)
+            : FEValues(elem, FiniteElement::getRecommendedOrder(elem.getType()), analysis_type) {
         }
 
         void reinit(int q_index) { q_point_index_ = q_index; }

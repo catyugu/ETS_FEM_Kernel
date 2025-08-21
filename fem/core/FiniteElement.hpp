@@ -64,6 +64,13 @@ namespace FEM {
          * @return 有限单元指针
          */
         static std::unique_ptr<FiniteElement> create(ElementType type, int order);
+        
+        /**
+         * @brief 根据单元类型自动选择合适的积分阶次
+         * @param type 单元类型
+         * @return 推荐的积分阶次
+         */
+        static int getRecommendedOrder(ElementType type);
     };
 
     /**
@@ -173,6 +180,27 @@ namespace FEM {
                 return std::make_unique<FiniteElementImpl<ElementType::Tetrahedron, 4>>(order);
             case ElementType::Hexahedron:
                 return std::make_unique<FiniteElementImpl<ElementType::Hexahedron, 8>>(order);
+            default:
+                throw std::runtime_error("Unsupported element type");
+        }
+    }
+    
+    // 实现getRecommendedOrder函数
+    inline int FiniteElement::getRecommendedOrder(ElementType type) {
+        // 根据单元类型自动选择合适的积分阶次
+        switch (type) {
+            case ElementType::Point:
+                return 1; // Point单元不需要积分
+            case ElementType::Line:
+                return 1; // 1D线单元使用2点高斯积分
+            case ElementType::Triangle:
+                return 1; // 线性三角形单元使用3点积分规则（已在Quadrature.hpp中修改）
+            case ElementType::Quadrilateral:
+                return 1; // 线性四边形单元使用2x2高斯积分
+            case ElementType::Tetrahedron:
+                return 1; // 线性四面体单元使用4点积分规则（已在Quadrature.hpp中修改）
+            case ElementType::Hexahedron:
+                return 1; // 线性六面体单元使用2x2x2高斯积分
             default:
                 throw std::runtime_error("Unsupported element type");
         }

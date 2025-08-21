@@ -18,7 +18,8 @@ namespace FEM {
 
             MatrixType K_elem = MatrixType::Zero(num_nodes, num_nodes);
 
-            FEValues fe_values(element, 1, AnalysisType::SCALAR_DIFFUSION);
+            // 使用新的FEValues构造函数，自动选择合适的积分阶数
+            FEValues fe_values(element, AnalysisType::SCALAR_DIFFUSION);
             const MaterialProperty& eps_prop = mat_.getProperty("permittivity");
 
             for (size_t q = 0; q < fe_values.n_quad_points(); ++q) {
@@ -28,7 +29,7 @@ namespace FEM {
 
                 // --- 正确的实现 ---
                 const auto& B = fe_values.dN_dx();
-                TScalar D = static_cast<TScalar>(eps); // 材料本构关系 (对于静电是标量)
+                auto D = static_cast<TScalar>(eps); // 材料本构关系 (对于静电是标量)
 
                 // --- 通用形式： K_elem += B^T * D * B * dV ---
                 K_elem += (B.transpose() * D * B) * static_cast<TScalar>(fe_values.JxW());
