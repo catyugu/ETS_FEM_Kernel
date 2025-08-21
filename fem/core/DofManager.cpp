@@ -5,8 +5,7 @@
 
 namespace FEM {
 
-    DofManager::DofManager(const Mesh& mesh) : mesh_(mesh), dofs_per_entity_(1), 
-        dof_type_(DofType::NODE), total_dofs_(0) {
+    DofManager::DofManager(const Mesh& mesh) : mesh_(mesh), total_dofs_(0) {
     }
 
     void DofManager::addVariable(const std::string& name, DofType type, int components) {
@@ -79,6 +78,10 @@ namespace FEM {
     }
 
     void DofManager::buildDofMap(int dofs_per_entity, DofType dof_type) {
+        // 清除已有变量以确保兼容性
+        variables_.clear();
+        variable_names_.clear();
+        
         addVariable("default", dof_type, dofs_per_entity);
         finalize();
     }
@@ -283,45 +286,6 @@ namespace FEM {
 
         // 转换为向量返回
         return std::vector<std::pair<int, int>>(sparsity_pattern.begin(), sparsity_pattern.end());
-    }
-
-    void DofManager::buildNodeDofMap() {
-        const auto& nodes = mesh_.getNodes();
-        total_dofs_ = nodes.size() * dofs_per_entity_;
-        
-        for (size_t i = 0; i < nodes.size(); ++i) {
-            node_dof_map_[nodes[i]->getId()] = static_cast<int>(i * dofs_per_entity_);
-        }
-    }
-
-    void DofManager::buildEdgeDofMap() {
-        // 使用Mesh类提供的边信息
-        const auto& edges = mesh_.getEdges();
-        total_dofs_ = edges.size() * dofs_per_entity_;
-        
-        for (size_t i = 0; i < edges.size(); ++i) {
-            edge_dof_map_[edges[i]->id] = static_cast<int>(i * dofs_per_entity_);
-        }
-    }
-
-    void DofManager::buildFaceDofMap() {
-        // 使用Mesh类提供的面信息
-        const auto& faces = mesh_.getFaces();
-        total_dofs_ = faces.size() * dofs_per_entity_;
-        
-        for (size_t i = 0; i < faces.size(); ++i) {
-            face_dof_map_[faces[i]->id] = static_cast<int>(i * dofs_per_entity_);
-        }
-    }
-
-    void DofManager::buildVolumeDofMap() {
-        // 实现体自由度映射
-        const auto& elements = mesh_.getElements();
-        total_dofs_ = elements.size() * dofs_per_entity_;
-        
-        for (size_t i = 0; i < elements.size(); ++i) {
-            volume_dof_map_[elements[i]->getId()] = static_cast<int>(i * dofs_per_entity_);
-        }
     }
 
 } // namespace FEM

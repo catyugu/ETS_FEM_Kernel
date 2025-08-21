@@ -3,26 +3,27 @@
 #include "../mesh/Mesh.hpp"
 #include <vector>
 #include <map>
-#include <set>
 #include <string>
+#include <set>
 #include <Eigen/Sparse>
 
 namespace FEM {
 
-    // 自由度类型枚举
+    /**
+     * @brief 自由度类型枚举
+     */
     enum class DofType {
-        NODE,
-        EDGE,
-        FACE,
-        VOLUME
+        NODE,   ///< 节点自由度
+        EDGE,   ///< 边自由度
+        FACE,   ///< 面自由度
+        VOLUME  ///< 体自由度
     };
 
     /**
-     * @brief 自由度管理器
+     * @brief 自由度管理器类
      * 
-     * 管理网格中各个几何实体（节点、边、面、体）上的自由度，
-     * 支持多种自由度类型以适应不同的单元类型（如边缘元）
-     * 支持多物理场变量管理
+     * 管理有限元网格中各种类型的自由度，支持节点、边、面和体自由度。
+     * 支持多物理场变量，每个变量可以有不同的自由度类型和分量数。
      */
     class DofManager {
     public:
@@ -107,40 +108,12 @@ namespace FEM {
          */
         void getElementDofs(const Element* elem, std::vector<int>& dofs) const;
 
-        /**
-         * @brief 构建节点自由度映射
-         */
-        void buildNodeDofMap();
-
-        /**
-         * @brief 构建边自由度映射
-         */
-        void buildEdgeDofMap();
-
-        /**
-         * @brief 构建面自由度映射
-         */
-        void buildFaceDofMap();
-
-        /**
-         * @brief 构建体自由度映射
-         */
-        void buildVolumeDofMap();
-
         const Mesh& mesh_;
         size_t total_dofs_;
         
         // 新增：多变量支持
         std::map<std::string, Variable> variables_;
         std::vector<std::string> variable_names_; // 保持变量添加的顺序
-        
-        // 旧接口兼容性成员
-        int dofs_per_entity_;
-        DofType dof_type_;
-        std::map<int, int> node_dof_map_;
-        std::map<int, int> edge_dof_map_;
-        std::map<int, int> face_dof_map_;
-        std::map<int, int> volume_dof_map_;
     };
 
 } // namespace FEM
