@@ -1,10 +1,12 @@
 #pragma once
+#include <stdexcept>
 #include <vector>
 #include "Node.hpp"
 
 namespace FEM {
     // 新增：单元类型枚举
     enum class ElementType {
+        Point,
         Line,
         Triangle,
         Quadrilateral,
@@ -21,6 +23,14 @@ namespace FEM {
         int getId() const { return id_; }
         const std::vector<Node*>& getNodes() const { return nodes_; }
         virtual int getNumNodes() const = 0;
+        
+        // 添加获取指定节点ID的方法
+        int getNodeId(size_t index) const { 
+            if (index < nodes_.size()) {
+                return nodes_[index]->getId();
+            }
+            throw std::out_of_range("Node index out of range");
+        }
 
         // 新增：纯虚函数，强制所有子类实现类型返回
         virtual ElementType getType() const = 0;
@@ -28,6 +38,13 @@ namespace FEM {
     private:
         int id_;
         std::vector<Node*> nodes_;
+    };
+
+    class PointElement : public Element {
+        public:
+            PointElement(int id, const std::vector<Node*>& nodes) : Element(id, nodes) {}
+            int getNumNodes() const override { return 1; }
+            ElementType getType() const override { return ElementType::Point; }
     };
 
     class LineElement : public Element {

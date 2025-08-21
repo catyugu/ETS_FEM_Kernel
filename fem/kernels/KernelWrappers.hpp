@@ -36,7 +36,16 @@ namespace FEM {
 
             Eigen::MatrixXd K_elem_dense = kernel_->compute_element_matrix(element);
 
-            auto dofs = dof_manager.getElementDofs(element);
+            // 获取单元自由度
+            std::vector<int> dofs;
+            const auto& nodes = element.getNodes();
+            dofs.reserve(nodes.size());
+            
+            for (const auto& node : nodes) {
+                int dof = dof_manager.getNodeDof(node->getId(), 0);
+                if (dof >= 0) dofs.push_back(dof);
+            }
+            
             for (size_t i = 0; i < dofs.size(); ++i) {
                 for (size_t j = 0; j < dofs.size(); ++j) {
                     K_global.coeffRef(dofs[i], dofs[j]) += K_elem_dense(i, j);

@@ -6,6 +6,7 @@
 #include "../utils/Quadrature.hpp"
 #include "../utils/ShapeFunctions.hpp"
 #include "../mesh/Element.hpp"
+#include "FiniteElement.hpp"
 
 namespace FEM {
     // 预计算并缓存的数据结构体
@@ -33,6 +34,8 @@ namespace FEM {
             ReferenceElementData data;
             if (type == ElementType::Line) {
                 data.q_points = Utils::Quadrature::getLineQuadrature(order);
+            } else if (type == ElementType::Triangle) {
+                data.q_points = Utils::Quadrature::getTriangleQuadrature(order);
             } else if (type == ElementType::Quadrilateral) {
                 data.q_points = Utils::Quadrature::getQuadrilateralQuadrature(order);
             } else if (type == ElementType::Tetrahedron) {
@@ -47,6 +50,9 @@ namespace FEM {
                 if (type == ElementType::Line) {
                     Utils::ShapeFunctions::getLineShapeFunctions(order, qp.point(0), N);
                     Utils::ShapeFunctions::getLineShapeFunctionDerivatives(order, qp.point(0), dN_dxi);
+                } else if (type == ElementType::Triangle) {
+                    Utils::ShapeFunctions::getTriangleShapeFunctions(order, qp.point(0), qp.point(1), N);
+                    Utils::ShapeFunctions::getTriangleShapeFunctionDerivatives(order, qp.point(0), qp.point(1), dN_dxi);
                 } else if (type == ElementType::Quadrilateral) {
                     Utils::ShapeFunctions::getQuadShapeFunctions(order, qp.point(0), qp.point(1), N);
                     Utils::ShapeFunctions::getQuadShapeFunctionDerivatives(order, qp.point(0), qp.point(1), dN_dxi);
@@ -64,4 +70,5 @@ namespace FEM {
         }
         inline static std::map<std::pair<ElementType, int>, ReferenceElementData> cache_;
     };
+
 }

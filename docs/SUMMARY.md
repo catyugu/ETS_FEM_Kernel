@@ -14,6 +14,7 @@
 - [fem::materials](fem/materials/README.md) - 材料属性
 - [fem::mesh](fem/mesh/README.md) - 网格结构
 - [fem::physics](fem/physics/README.md) - 物理问题接口
+- [fem::bcs](fem/bcs/README.md) - 边界条件实现
 
 ### utils 命名空间
 [utils 命名空间](utils/README.md) - 工具类
@@ -24,9 +25,12 @@
 
 - [DofManager](fem/core/classes/DofManager.md) - 自由度管理器
 - [FEValues](fem/core/classes/FEValues.md) - 有限元值计算器
+- [FEFaceValues](fem/core/classes/FEFaceValues.md) - 面单元值计算器
+- [FiniteElement](fem/core/classes/FiniteElement.md) - 有限单元类
 - [LinearSolver](fem/core/classes/LinearSolver.md) - 线性求解器
 - [Problem](fem/core/classes/Problem.md) - 问题定义基类
 - [ReferenceElement](fem/core/classes/ReferenceElement.md) - 参考单元类
+- [BoundaryCondition](fem/core/classes/BoundaryCondition.md) - 边界条件基类
 
 ### fem::io 命名空间类
 
@@ -45,17 +49,23 @@
 - [Material](fem/materials/classes/Material.md) - 材料类
 - [MaterialProperty](fem/materials/classes/MaterialProperty.md) - 材料属性类
 
+
+### fem::bcs 命名空间类
+
+- [DirichletBC](fem/bcs/classes/DirichletBC.md) - Dirichlet边界条件
+- [NeumannBC](fem/bcs/classes/NeumannBC.md) - Neumann边界条件
+- [CauchyBC](fem/bcs/classes/CauchyBC.md) - Cauchy边界条件
+
 ### fem::mesh 命名空间类
 
 - [Element](fem/mesh/classes/Element.md) - 单元类
 - [Mesh](fem/mesh/classes/Mesh.md) - 网格类
-- [Node](fem/mesh/classes/Node.md) - 节点类
 
 ### fem::physics 命名空间类
 
-- [HeatTransfer](fem/physics/classes/HeatTransfer.md) - 热传导问题类
-- [Electrostatics](fem/physics/classes/Electrostatics.md) - 静电场问题类
-- [PhysicsField](fem/physics/classes/PhysicsField.md) - 物理场抽象基类
+- [PhysicsField](fem/physics/classes/PhysicsField.md) - 物理场基类
+- [HeatTransfer](fem/physics/classes/HeatTransfer.md) - 热传导物理场
+- [Electrostatics](fem/physics/classes/Electrostatics.md) - 静电场物理场
 
 ### utils 命名空间类
 

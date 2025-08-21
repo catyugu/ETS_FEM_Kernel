@@ -10,6 +10,28 @@ namespace FEM::Utils {
         static void getLineShapeFunctions(int order, double xi, Eigen::VectorXd& N);
         static void getLineShapeFunctionDerivatives(int order, double xi, Eigen::MatrixXd& dN_dxi);
 
+        // --- 2D Triangle ---
+        static void getTriangleShapeFunctions(int order, double xi, double eta, Eigen::VectorXd& N) {
+            if (order == 1) {
+                N.resize(3);
+                // 三角形的三个节点形函数
+                // N1 = 1 - xi - eta (在顶点(0,0)处为1)
+                // N2 = xi (在顶点(1,0)处为1)
+                // N3 = eta (在顶点(0,1)处为1)
+                N << 1.0 - xi - eta, xi, eta;
+            } else throw std::invalid_argument("Triangle shape function order > 1 not implemented.");
+        }
+
+        static void getTriangleShapeFunctionDerivatives(int order, double xi, double eta, Eigen::MatrixXd& dN_dxi) {
+            if (order == 1) {
+                dN_dxi.resize(2, 3);
+                // d/dxi
+                dN_dxi.row(0) << -1.0, 1.0, 0.0;
+                // d/deta
+                dN_dxi.row(1) << -1.0, 0.0, 1.0;
+            } else throw std::invalid_argument("Triangle shape function derivative order > 1 not implemented.");
+        }
+
         // --- 2D Quad (NEW) ---
         static void getQuadShapeFunctions(int order, double xi, double eta, Eigen::VectorXd& N) {
             if (order == 1) {

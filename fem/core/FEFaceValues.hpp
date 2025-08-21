@@ -3,17 +3,18 @@
 #include <vector>
 #include <Eigen/Dense>
 #include "FiniteElement.hpp"
-#include "AnalysisTypes.hpp" // <--- 引入分析类型
+#include "AnalysisTypes.hpp"
+#include "../mesh/Element.hpp"
 
 namespace FEM {
-    class FEValues {
+    class FEFaceValues {
     public:
-        FEValues(const Element& elem, int order, AnalysisType analysis_type)
+        FEFaceValues(const Element& elem, int order, AnalysisType analysis_type)
             : element_(elem),
               finite_element_(FiniteElement::create(elem.getType(), order)),
-              analysis_type_(analysis_type) { // <--- 保存分析类型
+              analysis_type_(analysis_type) {
 
-            // ... (雅可比计算部分与之前相同) ...
+            // 获取节点坐标
             const auto& nodes = element_.getNodes();
             const int dim = nodes[0]->getCoords().size();
             const int num_nodes = element_.getNumNodes();
@@ -27,8 +28,13 @@ namespace FEM {
 
             for (size_t q = 0; q < finite_element_->getNumQuadPoints(); ++q) {
                 const auto& dN_dxi = finite_element_->getShapeFunctionDerivatives(q);
+                
+                // 计算雅可比矩阵
                 Eigen::MatrixXd jacobian = node_coords * dN_dxi.transpose();
                 double detJ = jacobian.determinant();
+                
+                // 对于面单元，我们需要特殊处理
+                // 这里简化处理，实际应用中可能需要更复杂的实现
                 if (detJ <= 0) throw std::runtime_error("Jacobian determinant is non-positive.");
 
                 all_JxW_.push_back(detJ * finite_element_->getQuadWeight(q));
@@ -46,11 +52,10 @@ namespace FEM {
         double JxW() const { return all_JxW_[q_point_index_]; }
 
     private:
-        // ... (其他成员变量不变) ...
         const Element& element_;
         std::unique_ptr<FiniteElement> finite_element_;
         int q_point_index_ = -1;
-        AnalysisType analysis_type_; // <--- 新增
+        AnalysisType analysis_type_;
 
         std::vector<double> all_JxW_;
         std::vector<Eigen::MatrixXd> all_dN_dx_;

@@ -4,94 +4,49 @@
 #include "../fem/materials/Material.hpp"
 #include "../fem/kernels/HeatDiffusionKernel.hpp"
 #include "../fem/physics/HeatTransfer.hpp"
+#include "../fem/bcs/DirichletBC.hpp" // 包含DirichletBC头文件
 #include "../utils/SimpleLogger.hpp"
 
 // 定义问题维度
 constexpr int problem_dim = 1;
 
-void run_1d_heat_conduction_test() {
-    Utils::Logger::instance().info("--- Setting up 1D Heat Conduction Problem ---");
+int main() {
+    Utils::Logger::instance().info("--- Setting up 1D Heat Conduction Problem (Refactored) ---");
 
-    // 1. 创建网格
-    auto mesh = FEM::Mesh::create_uniform_1d_mesh(1.0, 10); // 长度 1m, 10个单元
+    // 1. 创建网格 (现在它内部已经命名了 "left" 和 "right" 边界)
+    auto mesh = FEM::Mesh::create_uniform_1d_mesh(1.0, 10);
 
     // 2. 定义材料
     FEM::Material copper("Copper");
     copper.setProperty("thermal_conductivity", 401.0);
 
-    // 3. 创建物理场和 Kernels
+    // 3. 创建物理场
     auto heat_physics = std::make_unique<FEM::HeatTransfer<problem_dim>>();
+
+    // 4. 将 Kernels 添加到物理场
     heat_physics->addKernel(
         std::make_unique<FEM::HeatDiffusionKernel<problem_dim, 2>>(copper)
     );
 
-    // 4. 创建 Problem (使用默认的SparseLU求解器)
+    // 5. 【新方式】创建边界条件对象，并添加到物理场
+    heat_physics->addBoundaryCondition(
+        std::make_unique<FEM::DirichletBC<problem_dim>>("left", 373.15) // 施加在名为 "left" 的边界上
+    );
+    heat_physics->addBoundaryCondition(
+        std::make_unique<FEM::DirichletBC<problem_dim>>("right", 293.15) // 施加在名为 "right" 的边界上
+    );
+
+    // 6. 创建 Problem
     auto problem = std::make_unique<FEM::Problem<problem_dim>>(std::move(mesh), std::move(heat_physics));
 
-    // 5. **登记**边界条件 (注意函数名变化)
-    problem->addDirichletBC(0, 373.15);      // 左端点 100°C
-    problem->addDirichletBC(10, 293.15);     // 右端点 20°C
-
-    // 6. **组装**全局矩阵和向量
+    // 7. 组装
     problem->assemble();
 
-    // 7. **施加**所有已登记的边界条件
-    problem->applyBCs();
-
-    // 8. **求解**线性系统
+    // 8. 求解 (内部会自动处理所有已登记的边界条件)
     problem->solve();
 
-    // --- 新增：在这里显式调用 Exporter ---
+    // 9. 导出结果
     Utils::Logger::instance().info("Exporting results to output.vtk...");
     FEM::IO::Exporter::write_vtk("output.vtk", *problem);
     Utils::Logger::instance().info("Export complete.");
-}
-
-void run_1d_heat_conduction_test_cg() {
-    Utils::Logger::instance().info("--- Setting up 1D Heat Conduction Problem with CG solver ---");
-
-    // 1. 创建网格
-    auto mesh = FEM::Mesh::create_uniform_1d_mesh(1.0, 10); // 长度 1m, 10个单元
-
-    // 2. 定义材料
-    FEM::Material copper("Copper");
-    copper.setProperty("thermal_conductivity", 401.0);
-
-    // 3. 创建物理场和 Kernels
-    auto heat_physics = std::make_unique<FEM::HeatTransfer<problem_dim>>();
-    heat_physics->addKernel(
-        std::make_unique<FEM::HeatDiffusionKernel<problem_dim, 2>>(copper)
-    );
-
-    // 4. 创建 Problem (使用共轭梯度求解器)
-    auto problem = std::make_unique<FEM::Problem<problem_dim>>(std::move(mesh), std::move(heat_physics), FEM::SolverType::ConjugateGradient);
-
-    // 5. **登记**边界条件 (注意函数名变化)
-    problem->addDirichletBC(0, 373.15);      // 左端点 100°C
-    problem->addDirichletBC(10, 293.15);     // 右端点 20°C
-
-    // 6. **组装**全局矩阵和向量
-    problem->assemble();
-
-    // 7. **施加**所有已登记的边界条件
-    problem->applyBCs();
-
-    // 8. **求解**线性系统
-    problem->solve();
-
-    // --- 新增：在这里显式调用 Exporter ---
-    Utils::Logger::instance().info("Exporting results to output_cg.vtk...");
-    FEM::IO::Exporter::write_vtk("output_cg.vtk", *problem);
-    Utils::Logger::instance().info("Export complete.");
-}
-
-int main() {
-    try {
-        run_1d_heat_conduction_test();
-        run_1d_heat_conduction_test_cg();
-    } catch (const std::exception& e) {
-        Utils::Logger::instance().error(e.what());
-        return 1;
-    }
-    return 0;
 }

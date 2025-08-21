@@ -1,4 +1,4 @@
-﻿#include "Importer.hpp"
+#include "Importer.hpp"
 #include "../mesh/Element.hpp" // 需要包含具体的单元类型
 #include <fstream>
 #include <sstream>
@@ -23,9 +23,9 @@ namespace FEM::IO {
         while (std::getline(file, line)) {
             line.erase(0, line.find_first_not_of(" \t"));
             line.erase(line.find_last_not_of(" \t") + 1);
-            
+
             if (line.empty() || line[0] == '%') continue;
-            
+
             if (line.find("# number of mesh vertices") != std::string::npos) {
                 // 找到节点数量所在的行
                 std::stringstream ss(line);
@@ -33,11 +33,11 @@ namespace FEM::IO {
                 break;
             }
         }
-        
+
         // 重新定位到文件开始，重新读取
         file.clear();
         file.seekg(0, std::ios::beg);
-        
+
         bool in_vertex_coordinates = false;
         int nodes_read = 0;
 
@@ -45,21 +45,21 @@ namespace FEM::IO {
         while (std::getline(file, line) && nodes_read < num_nodes) {
             line.erase(0, line.find_first_not_of(" \t"));
             line.erase(line.find_last_not_of(" \t") + 1);
-            
+
             if (line.empty() || line[0] == '%') continue;
-            
+
             // 检查是否是节点坐标部分开始
             if (line.find("# Mesh vertex coordinates") != std::string::npos) {
                 in_vertex_coordinates = true;
                 continue;
             }
-            
+
             // 如果在节点坐标部分，读取坐标
             if (in_vertex_coordinates) {
                 std::stringstream ss(line);
                 double x, y, z;
                 if (ss >> x >> y >> z) {
-                    mesh->addNode(new Node(nodes_read, {x, y, z}));
+                    mesh->addNode(std::make_unique<Node>(nodes_read, std::vector<double>{x, y, z}));
                     nodes_read++;
                 }
             }
@@ -68,24 +68,24 @@ namespace FEM::IO {
         // 重新定位到文件开始，解析单元
         file.clear();
         file.seekg(0, std::ios::beg);
-        
+
         bool in_elements_section = false;
         int vertices_per_element = 0;
         int num_elements = 0;
         std::string element_type;
-        
+
         while (std::getline(file, line)) {
             line.erase(0, line.find_first_not_of(" \t"));
             line.erase(line.find_last_not_of(" \t") + 1);
-            
+
             if (line.empty() || line[0] == '%') continue;
-            
+
             // 检查是否进入单元部分
             if (line.find("# number of element types") != std::string::npos) {
                 in_elements_section = true;
                 continue;
             }
-            
+
             // 检查单元类型
             if (in_elements_section) {
                 // 查找单元类型名称
@@ -106,25 +106,26 @@ namespace FEM::IO {
                     vertices_per_element = 1; // 顶点单元
                     continue;
                 }
-                
+
                 // 读取每个单元的顶点数
                 if (line.find("# number of vertices per element") != std::string::npos) {
                     continue;
                 }
-                
+
                 // 读取单元数量
                 if (line.find("# number of elements") != std::string::npos) {
                     std::stringstream ss(line);
                     ss >> num_elements;
                     continue;
                 }
-                
+
                 // 处理单元索引
-                if (num_elements > 0 && vertices_per_element > 0 && line.find("#") == std::string::npos && !line.empty()) {
+                if (num_elements > 0 && vertices_per_element > 0 && line.find("#") == std::string::npos && !line.
+                    empty()) {
                     std::stringstream ss(line);
                     std::vector<int> node_indices(vertices_per_element);
                     bool valid = true;
-                    
+
                     // 读取节点索引
                     for (int i = 0; i < vertices_per_element; i++) {
                         if (!(ss >> node_indices[i])) {
@@ -132,46 +133,50 @@ namespace FEM::IO {
                             break;
                         }
                     }
-                    
+
                     if (valid) {
                         bool indices_valid = true;
                         for (int i = 0; i < vertices_per_element; i++) {
-                            if (node_indices[i] >= static_cast<int>(mesh->getNodes().size()) || 
+                            if (node_indices[i] >= static_cast<int>(mesh->getNodes().size()) ||
                                 node_indices[i] < 0) {
                                 indices_valid = false;
                                 break;
                             }
                         }
-                        
+
                         if (indices_valid) {
                             // 创建相应类型的单元
                             if (vertices_per_element == 1) {
-                                // 顶点单元 - 在此简单网格中我们不创建单元
+                                // 顶点单元
+                                mesh->addElement(std::make_unique<PointElement>(mesh->getElements().size(), std::vector<Node*>{
+                                                                      mesh->getNodes()[node_indices[0]].get()
+                                                                  })
+                                );
                             } else if (vertices_per_element == 2) {
                                 // 边单元
-                                mesh->addElement(new LineElement(mesh->getElements().size(), {
-                                    mesh->getNodes()[node_indices[0]], 
-                                    mesh->getNodes()[node_indices[1]]
-                                }));
+                                mesh->addElement(std::make_unique<LineElement>(mesh->getElements().size(), std::vector<Node*>{
+                                                                     mesh->getNodes()[node_indices[0]].get(),
+                                                                     mesh->getNodes()[node_indices[1]].get()
+                                                                 }));
                             } else if (vertices_per_element == 3) {
                                 // 三角形单元
-                                mesh->addElement(new TriElement(mesh->getElements().size(), {
-                                    mesh->getNodes()[node_indices[0]], 
-                                    mesh->getNodes()[node_indices[1]], 
-                                    mesh->getNodes()[node_indices[2]]
-                                }));
+                                mesh->addElement(std::make_unique<TriElement>(mesh->getElements().size(), std::vector<Node*>{
+                                                                    mesh->getNodes()[node_indices[0]].get(),
+                                                                    mesh->getNodes()[node_indices[1]].get(),
+                                                                    mesh->getNodes()[node_indices[2]].get()
+                                                                }));
                             } else if (vertices_per_element == 4) {
                                 // 四面体单元
-                                mesh->addElement(new TetraElement(mesh->getElements().size(), {
-                                    mesh->getNodes()[node_indices[0]], 
-                                    mesh->getNodes()[node_indices[1]], 
-                                    mesh->getNodes()[node_indices[2]], 
-                                    mesh->getNodes()[node_indices[3]]
-                                }));
+                                mesh->addElement(std::make_unique<TetraElement>(mesh->getElements().size(), std::vector<Node*>{
+                                                                      mesh->getNodes()[node_indices[0]].get(),
+                                                                      mesh->getNodes()[node_indices[1]].get(),
+                                                                      mesh->getNodes()[node_indices[2]].get(),
+                                                                      mesh->getNodes()[node_indices[3]].get()
+                                                                  }));
                             }
                         }
                     }
-                    
+
                     // 减少剩余需要读取的单元数
                     num_elements--;
                     if (num_elements <= 0) {
@@ -274,31 +279,31 @@ namespace FEM::IO {
                 std::stringstream data_ss;
                 std::string data_line;
                 int total_coords_read = 0;
-                
+
                 // 读取直到遇到</DataArray>
                 while (std::getline(file, data_line)) {
                     // 移除空白字符
                     data_line.erase(0, data_line.find_first_not_of(" \t"));
                     data_line.erase(data_line.find_last_not_of(" \t") + 1);
-                    
+
                     if (data_line.find("</DataArray>") != std::string::npos) {
                         break;
                     }
                     data_ss << data_line << " ";
                 }
-                
+
                 // 解析所有坐标
                 double x, y, z;
                 int points_read = 0;
                 while (data_ss >> x >> y >> z && points_read < num_points) {
-                    mesh->addNode(new Node(points_read, {x, y, z}));
+                    mesh->addNode(std::make_unique<Node>(points_read, std::vector<double>{x, y, z}));
                     points_read++;
                 }
-                
+
                 if (points_read != num_points) {
-                    throw std::runtime_error("Error parsing point coordinates: expected " + 
-                                           std::to_string(num_points) + " points, but read " + 
-                                           std::to_string(points_read));
+                    throw std::runtime_error("Error parsing point coordinates: expected " +
+                                             std::to_string(num_points) + " points, but read " +
+                                             std::to_string(points_read));
                 }
             }
             // 在点数据部分解析数据
@@ -312,26 +317,26 @@ namespace FEM::IO {
                     std::string comp_str = line.substr(start, end - start);
                     num_components = std::stoi(comp_str);
                 }
-                
+
                 // 计算预期的总数据点数量
                 int expected_values = num_points * num_components;
-                
+
                 // 读取所有点数据
                 std::stringstream data_ss;
                 std::string data_line;
-                
+
                 // 读取直到遇到</DataArray>
                 while (std::getline(file, data_line)) {
                     // 移除空白字符
                     data_line.erase(0, data_line.find_first_not_of(" \t"));
                     data_line.erase(data_line.find_last_not_of(" \t") + 1);
-                    
+
                     if (data_line.find("</DataArray>") != std::string::npos) {
                         break;
                     }
                     data_ss << data_line << " ";
                 }
-                
+
                 // 解析所有点数据
                 double value;
                 int data_read = 0;
@@ -339,13 +344,13 @@ namespace FEM::IO {
                     point_data.push_back(value);
                     data_read++;
                 }
-                
+
                 if (data_read != expected_values) {
-                    throw std::runtime_error("Error parsing point data: expected " + 
-                                           std::to_string(expected_values) + " data values (" + 
-                                           std::to_string(num_points) + " points with " + 
-                                           std::to_string(num_components) + " components), but read " + 
-                                           std::to_string(data_read));
+                    throw std::runtime_error("Error parsing point data: expected " +
+                                             std::to_string(expected_values) + " data values (" +
+                                             std::to_string(num_points) + " points with " +
+                                             std::to_string(num_components) + " components), but read " +
+                                             std::to_string(data_read));
                 }
             }
             // 在单元部分解析connectivity数据
@@ -354,19 +359,19 @@ namespace FEM::IO {
                 // 读取所有connectivity数据
                 std::stringstream data_ss;
                 std::string data_line;
-                
+
                 // 读取直到遇到</DataArray>
                 while (std::getline(file, data_line)) {
                     // 移除空白字符
                     data_line.erase(0, data_line.find_first_not_of(" \t"));
                     data_line.erase(data_line.find_last_not_of(" \t") + 1);
-                    
+
                     if (data_line.find("</DataArray>") != std::string::npos) {
                         break;
                     }
                     data_ss << data_line << " ";
                 }
-                
+
                 // 解析所有connectivity数据
                 int value;
                 while (data_ss >> value) {
@@ -379,19 +384,19 @@ namespace FEM::IO {
                 // 读取所有offsets数据
                 std::stringstream data_ss;
                 std::string data_line;
-                
+
                 // 读取直到遇到</DataArray>
                 while (std::getline(file, data_line)) {
                     // 移除空白字符
                     data_line.erase(0, data_line.find_first_not_of(" \t"));
                     data_line.erase(data_line.find_last_not_of(" \t") + 1);
-                    
+
                     if (data_line.find("</DataArray>") != std::string::npos) {
                         break;
                     }
                     data_ss << data_line << " ";
                 }
-                
+
                 // 解析所有offsets数据
                 int value;
                 while (data_ss >> value) {
@@ -404,19 +409,19 @@ namespace FEM::IO {
                 // 读取所有types数据
                 std::stringstream data_ss;
                 std::string data_line;
-                
+
                 // 读取直到遇到</DataArray>
                 while (std::getline(file, data_line)) {
                     // 移除空白字符
                     data_line.erase(0, data_line.find_first_not_of(" \t"));
                     data_line.erase(data_line.find_last_not_of(" \t") + 1);
-                    
+
                     if (data_line.find("</DataArray>") != std::string::npos) {
                         break;
                     }
                     data_ss << data_line << " ";
                 }
-                
+
                 // 解析所有types数据
                 int value;
                 while (data_ss >> value) {
@@ -435,21 +440,21 @@ namespace FEM::IO {
             switch (type) {
                 case 5: // triangle
                     if (offset == 3) {
-                        mesh->addElement(new TriElement(i, {
-                                                            mesh->getNodes()[connectivity[conn_index]],
-                                                            mesh->getNodes()[connectivity[conn_index + 1]],
-                                                            mesh->getNodes()[connectivity[conn_index + 2]]
+                        mesh->addElement(std::make_unique<TriElement>(i, std::vector<Node*>{
+                                                            mesh->getNodes()[connectivity[conn_index]].get(),
+                                                            mesh->getNodes()[connectivity[conn_index + 1]].get(),
+                                                            mesh->getNodes()[connectivity[conn_index + 2]].get()
                                                         }));
                         conn_index += 3;
                     }
                     break;
                 case 10: // tetrahedron
                     if (offset == 4) {
-                        mesh->addElement(new TetraElement(i, {
-                                                              mesh->getNodes()[connectivity[conn_index]],
-                                                              mesh->getNodes()[connectivity[conn_index + 1]],
-                                                              mesh->getNodes()[connectivity[conn_index + 2]],
-                                                              mesh->getNodes()[connectivity[conn_index + 3]]
+                        mesh->addElement(std::make_unique<TetraElement>(i, std::vector<Node*>{
+                                                              mesh->getNodes()[connectivity[conn_index]].get(),
+                                                              mesh->getNodes()[connectivity[conn_index + 1]].get(),
+                                                              mesh->getNodes()[connectivity[conn_index + 2]].get(),
+                                                              mesh->getNodes()[connectivity[conn_index + 3]].get()
                                                           }));
                         conn_index += 4;
                     }
@@ -556,31 +561,31 @@ namespace FEM::IO {
                 std::stringstream data_ss;
                 std::string data_line;
                 int total_coords_read = 0;
-                
+
                 // 读取直到遇到</DataArray>
                 while (std::getline(file, data_line)) {
                     // 移除空白字符
                     data_line.erase(0, data_line.find_first_not_of(" \t"));
                     data_line.erase(data_line.find_last_not_of(" \t") + 1);
-                    
+
                     if (data_line.find("</DataArray>") != std::string::npos) {
                         break;
                     }
                     data_ss << data_line << " ";
                 }
-                
+
                 // 解析所有坐标
                 double x, y, z;
                 int points_read = 0;
                 while (data_ss >> x >> y >> z && points_read < num_points) {
-                    mesh->addNode(new Node(points_read, {x, y, z}));
+                    mesh->addNode(std::make_unique<Node>(points_read, std::vector<double>{x, y, z}));
                     points_read++;
                 }
-                
+
                 if (points_read != num_points) {
-                    throw std::runtime_error("Error parsing point coordinates: expected " + 
-                                           std::to_string(num_points) + " points, but read " + 
-                                           std::to_string(points_read));
+                    throw std::runtime_error("Error parsing point coordinates: expected " +
+                                             std::to_string(num_points) + " points, but read " +
+                                             std::to_string(points_read));
                 }
             }
             // 在点数据部分解析数据
@@ -588,7 +593,7 @@ namespace FEM::IO {
                 // 检查这个数据字段是否是我们要找的字段
                 if (line.find("Name=\"" + field_name + "\"") != std::string::npos) {
                     field_found = true;
-                    
+
                     // 检查组件数量（如果有）
                     int num_components = 1;
                     size_t component_pos = line.find("NumberOfComponents=");
@@ -598,26 +603,26 @@ namespace FEM::IO {
                         std::string comp_str = line.substr(start, end - start);
                         num_components = std::stoi(comp_str);
                     }
-                    
+
                     // 计算预期的总数据点数量
                     int expected_values = num_points * num_components;
-                    
+
                     // 读取所有点数据
                     std::stringstream data_ss;
                     std::string data_line;
-                    
+
                     // 读取直到遇到</DataArray>
                     while (std::getline(file, data_line)) {
                         // 移除空白字符
                         data_line.erase(0, data_line.find_first_not_of(" \t"));
                         data_line.erase(data_line.find_last_not_of(" \t") + 1);
-                        
+
                         if (data_line.find("</DataArray>") != std::string::npos) {
                             break;
                         }
                         data_ss << data_line << " ";
                     }
-                    
+
                     // 解析所有点数据
                     double value;
                     int data_read = 0;
@@ -625,13 +630,13 @@ namespace FEM::IO {
                         point_data.push_back(value);
                         data_read++;
                     }
-                    
+
                     if (data_read != expected_values) {
-                        throw std::runtime_error("Error parsing point data field '" + field_name + "': expected " + 
-                                               std::to_string(expected_values) + " data values (" + 
-                                               std::to_string(num_points) + " points with " + 
-                                               std::to_string(num_components) + " components), but read " + 
-                                               std::to_string(data_read));
+                        throw std::runtime_error("Error parsing point data field '" + field_name + "': expected " +
+                                                 std::to_string(expected_values) + " data values (" +
+                                                 std::to_string(num_points) + " points with " +
+                                                 std::to_string(num_components) + " components), but read " +
+                                                 std::to_string(data_read));
                     }
                 }
             }
@@ -641,19 +646,19 @@ namespace FEM::IO {
                 // 读取所有connectivity数据
                 std::stringstream data_ss;
                 std::string data_line;
-                
+
                 // 读取直到遇到</DataArray>
                 while (std::getline(file, data_line)) {
                     // 移除空白字符
                     data_line.erase(0, data_line.find_first_not_of(" \t"));
                     data_line.erase(data_line.find_last_not_of(" \t") + 1);
-                    
+
                     if (data_line.find("</DataArray>") != std::string::npos) {
                         break;
                     }
                     data_ss << data_line << " ";
                 }
-                
+
                 // 解析所有connectivity数据
                 int value;
                 while (data_ss >> value) {
@@ -666,19 +671,19 @@ namespace FEM::IO {
                 // 读取所有offsets数据
                 std::stringstream data_ss;
                 std::string data_line;
-                
+
                 // 读取直到遇到</DataArray>
                 while (std::getline(file, data_line)) {
                     // 移除空白字符
                     data_line.erase(0, data_line.find_first_not_of(" \t"));
                     data_line.erase(data_line.find_last_not_of(" \t") + 1);
-                    
+
                     if (data_line.find("</DataArray>") != std::string::npos) {
                         break;
                     }
                     data_ss << data_line << " ";
                 }
-                
+
                 // 解析所有offsets数据
                 int value;
                 while (data_ss >> value) {
@@ -691,19 +696,19 @@ namespace FEM::IO {
                 // 读取所有types数据
                 std::stringstream data_ss;
                 std::string data_line;
-                
+
                 // 读取直到遇到</DataArray>
                 while (std::getline(file, data_line)) {
                     // 移除空白字符
                     data_line.erase(0, data_line.find_first_not_of(" \t"));
                     data_line.erase(data_line.find_last_not_of(" \t") + 1);
-                    
+
                     if (data_line.find("</DataArray>") != std::string::npos) {
                         break;
                     }
                     data_ss << data_line << " ";
                 }
-                
+
                 // 解析所有types数据
                 int value;
                 while (data_ss >> value) {
@@ -727,21 +732,21 @@ namespace FEM::IO {
             switch (type) {
                 case 5: // triangle
                     if (offset == 3) {
-                        mesh->addElement(new TriElement(i, {
-                                                            mesh->getNodes()[connectivity[conn_index]],
-                                                            mesh->getNodes()[connectivity[conn_index + 1]],
-                                                            mesh->getNodes()[connectivity[conn_index + 2]]
+                        mesh->addElement(std::make_unique<TriElement>(i, std::vector<Node*>{
+                                                            mesh->getNodes()[connectivity[conn_index]].get(),
+                                                            mesh->getNodes()[connectivity[conn_index + 1]].get(),
+                                                            mesh->getNodes()[connectivity[conn_index + 2]].get()
                                                         }));
                         conn_index += 3;
                     }
                     break;
                 case 10: // tetrahedron
                     if (offset == 4) {
-                        mesh->addElement(new TetraElement(i, {
-                                                              mesh->getNodes()[connectivity[conn_index]],
-                                                              mesh->getNodes()[connectivity[conn_index + 1]],
-                                                              mesh->getNodes()[connectivity[conn_index + 2]],
-                                                              mesh->getNodes()[connectivity[conn_index + 3]]
+                        mesh->addElement(std::make_unique<TetraElement>(i, std::vector<Node*>{
+                                                              mesh->getNodes()[connectivity[conn_index]].get(),
+                                                              mesh->getNodes()[connectivity[conn_index + 1]].get(),
+                                                              mesh->getNodes()[connectivity[conn_index + 2]].get(),
+                                                              mesh->getNodes()[connectivity[conn_index + 3]].get()
                                                           }));
                         conn_index += 4;
                     }

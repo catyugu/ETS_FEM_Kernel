@@ -30,13 +30,13 @@ namespace FEM {
         }
 
         /**
-         * @brief 组装全局刚度矩阵和载荷向量
+         * @brief 组装全局刚度矩阵和载荷向量（体积项）
          * @param mesh 网格对象
          * @param dof_manager 自由度管理器
          * @param K_global 全局刚度矩阵
          * @param F_global 全局载荷向量
          */
-        void assemble(const Mesh& mesh, const DofManager& dof_manager,
+        void assemble_volume(const Mesh& mesh, const DofManager& dof_manager,
                       Eigen::SparseMatrix<double>& K_global, Eigen::VectorXd& F_global) override {
             for (const auto& elem : mesh.getElements()) {
                 for (const auto& kernel_wrapper : kernels_) {

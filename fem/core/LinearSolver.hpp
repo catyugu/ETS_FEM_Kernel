@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <Eigen/Sparse>
 #include <Eigen/SparseLU>
@@ -62,8 +62,7 @@ namespace FEM {
                 // 求解失败
                 throw std::runtime_error("Eigen::SparseLU solving failed.");
             }
-            
-            Utils::Logger::instance().info("Linear system solved successfully with SparseLU.");
+            ::Utils::Logger::instance().info("Linear system solved successfully with SparseLU.");
             return x;
         }
 
@@ -76,11 +75,11 @@ namespace FEM {
         Eigen::VectorXd solveWithConjugateGradient(const Eigen::SparseMatrix<double>& A, const Eigen::VectorXd& b) const {
             // 创建共轭梯度求解器
             Eigen::ConjugateGradient<Eigen::SparseMatrix<double>, Eigen::Lower|Eigen::Upper> solver;
-            
+
             // 设置求解器参数
             solver.setMaxIterations(1000);
             solver.setTolerance(1e-6);
-            
+
             // 分解矩阵 A
             solver.compute(A);
             if (solver.info() != Eigen::Success) {
@@ -94,10 +93,10 @@ namespace FEM {
                 // 求解失败
                 throw std::runtime_error("ConjugateGradient solving failed.");
             }
-            
-            Utils::Logger::instance().info("Linear system solved successfully with ConjugateGradient.");
-            Utils::Logger::instance().info("CG iterations: " + std::to_string(solver.iterations()) + 
-                                          ", estimated error: " + std::to_string(solver.error()));
+
+            ::Utils::Logger::instance().info("Linear system solved successfully with ConjugateGradient.");
+            ::Utils::Logger::instance().info("CG iterations: " + std::to_string(solver.iterations()) +
+                                           ", estimated error: " + std::to_string(solver.error()));
             return x;
         }
 

@@ -86,8 +86,10 @@ try {
 3. 读取单元连接信息并创建相应的单元对象
 
 支持的单元类型包括：
-- 二维三角形单元（TriElement）
-- 三维四面体单元（TetrahedronElement）
+- 点单元（PointElement）
+- 线单元（LineElement）
+- 三角形单元（TriElement）
+- 四面体单元（TetraElement）
 
 ## 依赖关系
 

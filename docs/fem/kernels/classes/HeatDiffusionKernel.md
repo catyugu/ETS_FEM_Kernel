@@ -4,6 +4,8 @@
 
 `HeatDiffusionKernel` 类是热传导问题的物理内核实现，继承自 [Kernel](Kernel.md) 基类。该类负责计算热传导问题的单元刚度矩阵，是有限元热分析的核心计算组件。
 
+与之前版本相比，该类现在负责构建B矩阵（应变-位移矩阵或标量问题的梯度算子），而不是依赖 [FEValues](../../core/classes/FEValues.md) 类提供。
+
 ## 类定义
 
 ```cpp
@@ -59,11 +61,13 @@ auto element_matrix = kernel.compute_element_matrix(element);
 K_elem += B^T * D * B * dV
 
 其中：
-- B 是梯度矩阵（应变-位移矩阵或标量问题的梯度算子）
+- B 是梯度矩阵（应变-位移矩阵或标量问题的梯度算子），现在由该类负责构建
 - D 是材料属性矩阵（对于热传导问题，是一个标量，即热导率）
 - dV 是体积微元（通过雅可比行列式和积分权重计算）
 
-该实现使用 [FEValues](../../core/classes/FEValues.md) 类来计算形函数梯度和几何信息，并从材料属性中获取热导率。
+该实现使用 [FEValues](../../core/classes/FEValues.md) 类来计算形函数梯度和几何信息，并从材料属性中获取热导率。与之前版本相比，B矩阵的构建现在在该类内部完成，而不是在 [FEValues](../../core/classes/FEValues.md) 类中。
+
+这种设计使得 [FEValues](../../core/classes/FEValues.md) 类更加通用，可以适用于不同类型的物理问题，而每个Kernel可以根据自己的需要构建相应的B矩阵。
 
 ## 依赖关系
 

@@ -40,7 +40,7 @@ class Node
 
 ```cpp
 // 创建2D节点
-auto node_2d = std::make_shared<FEM::Node>(1, std::vector<double>{1.0, 2.0});
+auto node_2d = std::make_unique<FEM::Node>(1, std::vector<double>{1.0, 2.0});
 
 // 获取节点ID和坐标
 int id = node_2d->getId();
@@ -48,7 +48,7 @@ const auto& coords = node_2d->getCoords();
 std::cout << "Node " << id << " at (" << coords[0] << ", " << coords[1] << ")" << std::endl;
 
 // 创建3D节点
-auto node_3d = std::make_shared<FEM::Node>(2, std::vector<double>{1.0, 2.0, 3.0});
+auto node_3d = std::make_unique<FEM::Node>(2, std::vector<double>{1.0, 2.0, 3.0});
 ```
 
 ## 实现细节
