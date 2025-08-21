@@ -1,6 +1,8 @@
 #include "Mesh.hpp"
 #include "Element.hpp"
 #include <stdexcept>
+#include <algorithm>
+#include <set>
 
 namespace FEM {
 
@@ -27,6 +29,231 @@ namespace FEM {
         return nullptr;
     }
 
+    void Mesh::buildTopology() {
+        // 清空现有的边和面
+        edges_.clear();
+        faces_.clear();
+        
+        // 用于确保边和面唯一性的集合
+        std::set<std::pair<int, int>> edge_set;
+        std::set<std::set<int>> face_set;
+        
+        int edge_id_counter = 0;
+        int face_id_counter = 0;
+        
+        // 遍历所有单元以识别边和面
+        for (const auto& elem : elements_) {
+            const auto& nodes = elem->getNodes();
+            
+            // 根据单元类型确定边和面
+            switch (elem->getType()) {
+                case ElementType::Line:
+                    // 线单元本身就是一条边
+                    if (nodes.size() >= 2) {
+                        std::pair<int, int> edge(nodes[0]->getId(), nodes[1]->getId());
+                        if (edge.first > edge.second) std::swap(edge.first, edge.second);
+                        if (edge_set.find(edge) == edge_set.end()) {
+                            edge_set.insert(edge);
+                            edges_.push_back(std::make_unique<Edge>(edge_id_counter++, edge.first, edge.second));
+                        }
+                    }
+                    break;
+                    
+                case ElementType::Triangle:
+                    // 三角形单元有3条边
+                    for (size_t i = 0; i < 3; ++i) {
+                        size_t next = (i + 1) % 3;
+                        std::pair<int, int> edge(nodes[i]->getId(), nodes[next]->getId());
+                        if (edge.first > edge.second) std::swap(edge.first, edge.second);
+                        if (edge_set.find(edge) == edge_set.end()) {
+                            edge_set.insert(edge);
+                            edges_.push_back(std::make_unique<Edge>(edge_id_counter++, edge.first, edge.second));
+                        }
+                    }
+                    // 三角形单元本身是一个面
+                    {
+                        std::set<int> face_nodes;
+                        for (const auto& node : nodes) {
+                            face_nodes.insert(node->getId());
+                        }
+                        if (face_set.find(face_nodes) == face_set.end()) {
+                            face_set.insert(face_nodes);
+                            std::vector<int> node_ids(face_nodes.begin(), face_nodes.end());
+                            faces_.push_back(std::make_unique<Face>(face_id_counter++, node_ids));
+                        }
+                    }
+                    break;
+                    
+                case ElementType::Quadrilateral:
+                    // 四边形单元有4条边
+                    for (size_t i = 0; i < 4; ++i) {
+                        size_t next = (i + 1) % 4;
+                        std::pair<int, int> edge(nodes[i]->getId(), nodes[next]->getId());
+                        if (edge.first > edge.second) std::swap(edge.first, edge.second);
+                        if (edge_set.find(edge) == edge_set.end()) {
+                            edge_set.insert(edge);
+                            edges_.push_back(std::make_unique<Edge>(edge_id_counter++, edge.first, edge.second));
+                        }
+                    }
+                    // 四边形单元本身是一个面
+                    {
+                        std::set<int> face_nodes;
+                        for (const auto& node : nodes) {
+                            face_nodes.insert(node->getId());
+                        }
+                        if (face_set.find(face_nodes) == face_set.end()) {
+                            face_set.insert(face_nodes);
+                            std::vector<int> node_ids(face_nodes.begin(), face_nodes.end());
+                            faces_.push_back(std::make_unique<Face>(face_id_counter++, node_ids));
+                        }
+                    }
+                    break;
+                    
+                case ElementType::Tetrahedron:
+                    // 四面体单元有6条边
+                    for (size_t i = 0; i < 4; ++i) {
+                        for (size_t j = i + 1; j < 4; ++j) {
+                            std::pair<int, int> edge(nodes[i]->getId(), nodes[j]->getId());
+                            if (edge.first > edge.second) std::swap(edge.first, edge.second);
+                            if (edge_set.find(edge) == edge_set.end()) {
+                                edge_set.insert(edge);
+                                edges_.push_back(std::make_unique<Edge>(edge_id_counter++, edge.first, edge.second));
+                            }
+                        }
+                    }
+                    // 四面体单元有4个面
+                    // 面0: 节点 0,1,2
+                    {
+                        std::set<int> face_nodes = {nodes[0]->getId(), nodes[1]->getId(), nodes[2]->getId()};
+                        if (face_set.find(face_nodes) == face_set.end()) {
+                            face_set.insert(face_nodes);
+                            std::vector<int> node_ids(face_nodes.begin(), face_nodes.end());
+                            faces_.push_back(std::make_unique<Face>(face_id_counter++, node_ids));
+                        }
+                    }
+                    // 面1: 节点 0,1,3
+                    {
+                        std::set<int> face_nodes = {nodes[0]->getId(), nodes[1]->getId(), nodes[3]->getId()};
+                        if (face_set.find(face_nodes) == face_set.end()) {
+                            face_set.insert(face_nodes);
+                            std::vector<int> node_ids(face_nodes.begin(), face_nodes.end());
+                            faces_.push_back(std::make_unique<Face>(face_id_counter++, node_ids));
+                        }
+                    }
+                    // 面2: 节点 0,2,3
+                    {
+                        std::set<int> face_nodes = {nodes[0]->getId(), nodes[2]->getId(), nodes[3]->getId()};
+                        if (face_set.find(face_nodes) == face_set.end()) {
+                            face_set.insert(face_nodes);
+                            std::vector<int> node_ids(face_nodes.begin(), face_nodes.end());
+                            faces_.push_back(std::make_unique<Face>(face_id_counter++, node_ids));
+                        }
+                    }
+                    // 面3: 节点 1,2,3
+                    {
+                        std::set<int> face_nodes = {nodes[1]->getId(), nodes[2]->getId(), nodes[3]->getId()};
+                        if (face_set.find(face_nodes) == face_set.end()) {
+                            face_set.insert(face_nodes);
+                            std::vector<int> node_ids(face_nodes.begin(), face_nodes.end());
+                            faces_.push_back(std::make_unique<Face>(face_id_counter++, node_ids));
+                        }
+                    }
+                    break;
+                    
+                case ElementType::Hexahedron:
+                    // 六面体单元有12条边
+                    // 底面4条边
+                    for (size_t i = 0; i < 4; ++i) {
+                        size_t next = (i + 1) % 4;
+                        std::pair<int, int> edge(nodes[i]->getId(), nodes[next]->getId());
+                        if (edge.first > edge.second) std::swap(edge.first, edge.second);
+                        if (edge_set.find(edge) == edge_set.end()) {
+                            edge_set.insert(edge);
+                            edges_.push_back(std::make_unique<Edge>(edge_id_counter++, edge.first, edge.second));
+                        }
+                    }
+                    // 顶面4条边
+                    for (size_t i = 4; i < 8; ++i) {
+                        size_t next = (i + 1) % 4 + 4;
+                        std::pair<int, int> edge(nodes[i]->getId(), nodes[next]->getId());
+                        if (edge.first > edge.second) std::swap(edge.first, edge.second);
+                        if (edge_set.find(edge) == edge_set.end()) {
+                            edge_set.insert(edge);
+                            edges_.push_back(std::make_unique<Edge>(edge_id_counter++, edge.first, edge.second));
+                        }
+                    }
+                    // 垂直边4条
+                    for (size_t i = 0; i < 4; ++i) {
+                        std::pair<int, int> edge(nodes[i]->getId(), nodes[i+4]->getId());
+                        if (edge.first > edge.second) std::swap(edge.first, edge.second);
+                        if (edge_set.find(edge) == edge_set.end()) {
+                            edge_set.insert(edge);
+                            edges_.push_back(std::make_unique<Edge>(edge_id_counter++, edge.first, edge.second));
+                        }
+                    }
+                    // 六面体单元有6个面
+                    // 底面: 节点 0,1,2,3
+                    {
+                        std::set<int> face_nodes = {nodes[0]->getId(), nodes[1]->getId(), nodes[2]->getId(), nodes[3]->getId()};
+                        if (face_set.find(face_nodes) == face_set.end()) {
+                            face_set.insert(face_nodes);
+                            std::vector<int> node_ids(face_nodes.begin(), face_nodes.end());
+                            faces_.push_back(std::make_unique<Face>(face_id_counter++, node_ids));
+                        }
+                    }
+                    // 顶面: 节点 4,5,6,7
+                    {
+                        std::set<int> face_nodes = {nodes[4]->getId(), nodes[5]->getId(), nodes[6]->getId(), nodes[7]->getId()};
+                        if (face_set.find(face_nodes) == face_set.end()) {
+                            face_set.insert(face_nodes);
+                            std::vector<int> node_ids(face_nodes.begin(), face_nodes.end());
+                            faces_.push_back(std::make_unique<Face>(face_id_counter++, node_ids));
+                        }
+                    }
+                    // 前面: 节点 0,1,5,4
+                    {
+                        std::set<int> face_nodes = {nodes[0]->getId(), nodes[1]->getId(), nodes[5]->getId(), nodes[4]->getId()};
+                        if (face_set.find(face_nodes) == face_set.end()) {
+                            face_set.insert(face_nodes);
+                            std::vector<int> node_ids(face_nodes.begin(), face_nodes.end());
+                            faces_.push_back(std::make_unique<Face>(face_id_counter++, node_ids));
+                        }
+                    }
+                    // 后面: 节点 3,2,6,7
+                    {
+                        std::set<int> face_nodes = {nodes[3]->getId(), nodes[2]->getId(), nodes[6]->getId(), nodes[7]->getId()};
+                        if (face_set.find(face_nodes) == face_set.end()) {
+                            face_set.insert(face_nodes);
+                            std::vector<int> node_ids(face_nodes.begin(), face_nodes.end());
+                            faces_.push_back(std::make_unique<Face>(face_id_counter++, node_ids));
+                        }
+                    }
+                    // 左面: 节点 0,3,7,4
+                    {
+                        std::set<int> face_nodes = {nodes[0]->getId(), nodes[3]->getId(), nodes[7]->getId(), nodes[4]->getId()};
+                        if (face_set.find(face_nodes) == face_set.end()) {
+                            face_set.insert(face_nodes);
+                            std::vector<int> node_ids(face_nodes.begin(), face_nodes.end());
+                            faces_.push_back(std::make_unique<Face>(face_id_counter++, node_ids));
+                        }
+                    }
+                    // 右面: 节点 1,2,6,5
+                    {
+                        std::set<int> face_nodes = {nodes[1]->getId(), nodes[2]->getId(), nodes[6]->getId(), nodes[5]->getId()};
+                        if (face_set.find(face_nodes) == face_set.end()) {
+                            face_set.insert(face_nodes);
+                            std::vector<int> node_ids(face_nodes.begin(), face_nodes.end());
+                            faces_.push_back(std::make_unique<Face>(face_id_counter++, node_ids));
+                        }
+                    }
+                    break;
+                    
+                default:
+                    break;
+            }
+        }
+    }
+
     std::unique_ptr<Mesh> Mesh::create_uniform_1d_mesh(double length, int num_elements) {
         auto mesh = std::make_unique<Mesh>();
         double h = length / num_elements;
@@ -40,6 +267,9 @@ namespace FEM {
         // 添加边界信息
         mesh->addBoundaryNode("left", 0);
         mesh->addBoundaryNode("right", num_elements);
+        
+        // 构建拓扑结构
+        mesh->buildTopology();
         
         return mesh;
     }
@@ -87,6 +317,9 @@ namespace FEM {
         for (int j = 0; j <= ny; ++j) {
             mesh->addBoundaryNode("right", j * (nx + 1) + nx);
         }
+        
+        // 构建拓扑结构
+        mesh->buildTopology();
         
         return mesh;
     }
@@ -150,6 +383,9 @@ namespace FEM {
                 mesh->addBoundaryNode("top", nz * (nx + 1) * (ny + 1) + j * (nx + 1) + i); // z=depth面
             }
         }
+        
+        // 构建拓扑结构
+        mesh->buildTopology();
         
         return mesh;
     }

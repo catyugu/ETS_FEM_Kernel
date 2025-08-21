@@ -6,6 +6,8 @@
 
 与之前版本相比，该类现在支持多种自由度类型，不仅支持传统的节点自由度，还支持边、面和体自由度，为使用边缘元等高级单元类型提供了支持。
 
+该类还支持基于变量的自由度管理，可以同时处理多个物理场的自由度，为多物理场耦合问题提供了支持。
+
 ## 类定义
 
 ```cpp
@@ -34,17 +36,80 @@ class DofManager
 
 ## 成员函数
 
-### void buildDofMap(int dofs_per_entity, DofType dof_type = DofType::NODE)
+### void addVariable(const std::string& name, DofType type, int components = 1)
 
-构建自由度映射。
+添加一个自由度变量。
+
+**参数:**
+- `name` - 变量名称（例如"Voltage"或"Temperature"）
+- `type` - 自由度类型
+- `components` - 每个实体的分量数（例如矢量为2或3，默认为1）
+
+### void finalize()
+
+根据已添加的变量构建所有自由度映射。
+
+### void buildDofMap(int dofs_per_entity, DofType dof_type = DofType::NODE) [[deprecated]]
+
+构建自由度映射（旧版，内部将创建一个名为"default"的变量）。
 
 **参数:**
 - `dofs_per_entity` - 每个几何实体上的自由度数量
 - `dof_type` - 自由度类型（默认为节点自由度）
 
+**注意:** 此函数已被标记为废弃，推荐使用`addVariable`和`finalize`接口。
+
+### int getNodeDof(const std::string& var_name, int node_id, int component = 0) const
+
+获取指定变量在节点上的自由度索引。
+
+**参数:**
+- `var_name` - 变量名称
+- `node_id` - 节点ID
+- `component` - 自由度分量（对于矢量问题，如二维问题中的x和y分量）
+
+**返回值:**
+- 全局自由度索引，如果未找到则返回-1
+
+### int getEdgeDof(const std::string& var_name, int edge_id, int component = 0) const
+
+获取指定变量在边上的自由度索引。
+
+**参数:**
+- `var_name` - 变量名称
+- `edge_id` - 边ID
+- `component` - 自由度分量
+
+**返回值:**
+- 全局自由度索引，如果未找到则返回-1
+
+### int getFaceDof(const std::string& var_name, int face_id, int component = 0) const
+
+获取指定变量在面上的自由度索引。
+
+**参数:**
+- `var_name` - 变量名称
+- `face_id` - 面ID
+- `component` - 自由度分量
+
+**返回值:**
+- 全局自由度索引，如果未找到则返回-1
+
+### int getVolumeDof(const std::string& var_name, int volume_id, int component = 0) const
+
+获取指定变量在体上的自由度索引。
+
+**参数:**
+- `var_name` - 变量名称
+- `volume_id` - 体ID
+- `component` - 自由度分量
+
+**返回值:**
+- 全局自由度索引，如果未找到则返回-1
+
 ### int getNodeDof(int node_id, int dof_component = 0) const
 
-获取节点自由度索引。
+获取节点自由度索引（兼容旧接口）。
 
 **参数:**
 - `node_id` - 节点ID
@@ -55,7 +120,7 @@ class DofManager
 
 ### int getEdgeDof(int edge_id, int dof_component = 0) const
 
-获取边自由度索引。
+获取边自由度索引（兼容旧接口）。
 
 **参数:**
 - `edge_id` - 边ID
@@ -66,7 +131,7 @@ class DofManager
 
 ### int getFaceDof(int face_id, int dof_component = 0) const
 
-获取面自由度索引。
+获取面自由度索引（兼容旧接口）。
 
 **参数:**
 - `face_id` - 面ID
@@ -77,7 +142,7 @@ class DofManager
 
 ### int getVolumeDof(int volume_id, int dof_component = 0) const
 
-获取体自由度索引。
+获取体自由度索引（兼容旧接口）。
 
 **参数:**
 - `volume_id` - 体ID
@@ -92,6 +157,16 @@ class DofManager
 
 **返回值:**
 - 自由度总数
+
+### size_t getNumDofs(const std::string& var_name) const
+
+获取特定变量的自由度数。
+
+**参数:**
+- `var_name` - 变量名称
+
+**返回值:**
+- 特定变量的自由度数
 
 ### std::vector<std::pair<int, int>> computeSparsityPattern(const Mesh& mesh) const
 
@@ -118,6 +193,8 @@ class DofManager
 
 ## 示例用法
 
+### 单物理场问题（使用旧接口）
+
 ```cpp
 // 假设已经有一个网格对象
 FEM::Mesh mesh = ...;
@@ -133,6 +210,38 @@ dof_manager.buildDofMap(2, FEM::DofType::NODE);
 
 // 获取特定节点的自由度索引
 int dof_index = dof_manager.getNodeDof(5, 0); // 节点5的第0个自由度分量
+
+// 计算稀疏模式
+auto sparsity_pattern = dof_manager.computeSparsityPattern(mesh);
+```
+
+### 多物理场问题（使用新接口）
+
+```cpp
+// 假设已经有一个网格对象
+FEM::Mesh mesh = ...;
+
+// 创建自由度管理器
+FEM::DofManager dof_manager(mesh);
+
+// 添加电场变量 (V)，节点自由度，每个节点1个分量
+dof_manager.addVariable("Voltage", FEM::DofType::NODE, 1);
+
+// 添加温度场变量 (T)，也是节点自由度，每个节点1个分量
+dof_manager.addVariable("Temperature", FEM::DofType::NODE, 1);
+
+// 构建所有自由度映射
+dof_manager.finalize();
+
+// 获取节点5上"Temperature"变量的自由度
+int temp_dof = dof_manager.getNodeDof("Temperature", 5, 0);
+
+// 获取自由度总数
+size_t total_dofs = dof_manager.getNumDofs();
+
+// 获取特定变量的自由度数
+size_t voltage_dofs = dof_manager.getNumDofs("Voltage");
+size_t temperature_dofs = dof_manager.getNumDofs("Temperature");
 
 // 计算稀疏模式
 auto sparsity_pattern = dof_manager.computeSparsityPattern(mesh);
