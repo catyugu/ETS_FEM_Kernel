@@ -14,39 +14,39 @@ class Mesh
 
 ### ~Mesh()
 
-析构函数，负责释放所有节点和单元的内存。
+析构函数，负责释放所有节点和单元的内存。使用默认析构函数，因为智能指针会自动管理内存。
 
 ## 成员函数
 
-### void addNode(std::shared_ptr<Node> node)
+### void addNode(std::unique_ptr<Node> node)
 
 添加节点到网格中。
 
 **参数:**
 - `node` - 要添加的节点智能指针
 
-### void addElement(std::shared_ptr<Element> element)
+### void addElement(std::unique_ptr<Element> element)
 
 添加单元到网格中。
 
 **参数:**
 - `element` - 要添加的单元智能指针
 
-### const std::vector<std::shared_ptr<Node>>& getNodes() const
+### const std::vector<std::unique_ptr<Node>>& getNodes() const
 
 获取网格中所有节点的引用。
 
 **返回值:**
 - 包含所有节点智能指针的向量的常量引用
 
-### const std::vector<std::shared_ptr<Element>>& getElements() const
+### const std::vector<std::unique_ptr<Element>>& getElements() const
 
 获取网格中所有单元的引用。
 
 **返回值:**
 - 包含所有单元智能指针的向量的常量引用
 
-### std::shared_ptr<Node> getNodeById(int id) const
+### Node* getNodeById(int id) const
 
 根据ID获取节点。
 
@@ -54,7 +54,7 @@ class Mesh
 - `id` - 节点ID
 
 **返回值:**
-- 指定ID的节点智能指针，如果未找到则返回空指针
+- 指定ID的节点指针，如果未找到则返回空指针
 
 ## 静态工厂方法
 
@@ -104,17 +104,17 @@ class Mesh
 auto mesh = std::make_unique<FEM::Mesh>();
 
 // 添加节点和单元
-auto node1 = std::make_shared<FEM::Node>(1, std::vector<double>{0.0, 0.0});
-auto node2 = std::make_shared<FEM::Node>(2, std::vector<double>{1.0, 0.0});
-auto node3 = std::make_shared<FEM::Node>(3, std::vector<double>{0.0, 1.0});
+auto node1 = std::make_unique<FEM::Node>(1, std::vector<double>{0.0, 0.0});
+auto node2 = std::make_unique<FEM::Node>(2, std::vector<double>{1.0, 0.0});
+auto node3 = std::make_unique<FEM::Node>(3, std::vector<double>{0.0, 1.0});
 
-mesh->addNode(node1);
-mesh->addNode(node2);
-mesh->addNode(node3);
+mesh->addNode(std::move(node1));
+mesh->addNode(std::move(node2));
+mesh->addNode(std::move(node3));
 
-std::vector<std::shared_ptr<FEM::Node>> nodes = {node1, node2, node3};
-auto element = std::make_shared<FEM::TriElement>(1, nodes);
-mesh->addElement(element);
+std::vector<FEM::Node*> nodes = {node1.get(), node2.get(), node3.get()};
+auto element = std::make_unique<FEM::TriElement>(1, nodes);
+mesh->addElement(std::move(element));
 
 // 创建规则网格
 auto uniform_mesh = FEM::Mesh::create_uniform_2d_mesh(1.0, 1.0, 10, 10);
@@ -122,7 +122,7 @@ auto uniform_mesh = FEM::Mesh::create_uniform_2d_mesh(1.0, 1.0, 10, 10);
 
 ## 实现细节
 
-`Mesh` 类使用智能指针管理节点和单元的内存，避免了手动内存管理的问题。通过 [getNodeById](file:///E:/code/cpp/ETS_FEM_Kernel/fem/mesh/Mesh.cpp#L26-L34) 方法可以方便地根据ID查找节点，这在施加边界条件等操作中非常有用。
+`Mesh` 类使用智能指针管理节点和单元的内存，避免了手动内存管理的问题。通过`getNodeById`方法可以方便地根据ID查找节点，这在施加边界条件等操作中非常有用。
 
 ## 依赖关系
 

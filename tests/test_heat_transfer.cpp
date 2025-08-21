@@ -14,37 +14,13 @@
 #include "physics/Electrostatics.hpp"
 // 添加边界条件头文件
 #include "bcs/DirichletBC.hpp"
+#include "test_utils.hpp"
 
 using namespace FEM;
 using namespace FEM::IO;
 #undef max
 #undef min
-extern int findClosestNode(const std::vector<Node*>& nodes, const std::vector<double>& target_coords, double tolerance = 1e-10);
-// 添加一个辅助函数，用于根据坐标找到最接近的节点
-// int findClosestNode(const std::vector<Node*>& nodes, const std::vector<double>& target_coords, double tolerance = 1e-10) {
-//     int closest_index = -1;
-//     double min_distance = std::numeric_limits<double>::max();
-//
-//     for (size_t i = 0; i < nodes.size(); ++i) {
-//         const auto& coords = nodes[i]->getCoords();
-//
-//         double distance = 0.0;
-//         for (size_t j = 0; j < coords.size(); ++j) {
-//             distance += (coords[j] - target_coords[j]) * (coords[j] - target_coords[j]);
-//         }
-//
-//         if (distance < min_distance) {
-//             min_distance = distance;
-//             closest_index = i;
-//         }
-//     }
-//
-//     if (min_distance < tolerance) {
-//         return closest_index;
-//     } else {
-//         return -1;
-//     }
-// }
+
 
 class TestHeatTransfer : public ::testing::Test {
 protected:

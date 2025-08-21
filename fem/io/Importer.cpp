@@ -1,4 +1,4 @@
-﻿#include "Importer.hpp"
+#include "Importer.hpp"
 #include "../mesh/Element.hpp" // 需要包含具体的单元类型
 #include <fstream>
 #include <sstream>
@@ -59,7 +59,7 @@ namespace FEM::IO {
                 std::stringstream ss(line);
                 double x, y, z;
                 if (ss >> x >> y >> z) {
-                    mesh->addNode(new Node(nodes_read, {x, y, z}));
+                    mesh->addNode(std::make_unique<Node>(nodes_read, std::vector<double>{x, y, z}));
                     nodes_read++;
                 }
             }
@@ -148,30 +148,30 @@ namespace FEM::IO {
                             // 创建相应类型的单元
                             if (vertices_per_element == 1) {
                                 // 顶点单元
-                                mesh->addElement(new PointElement(mesh->getElements().size(), {
-                                                                      mesh->getNodes()[node_indices[0]]
+                                mesh->addElement(std::make_unique<PointElement>(mesh->getElements().size(), std::vector<Node*>{
+                                                                      mesh->getNodes()[node_indices[0]].get()
                                                                   })
                                 );
                             } else if (vertices_per_element == 2) {
                                 // 边单元
-                                mesh->addElement(new LineElement(mesh->getElements().size(), {
-                                                                     mesh->getNodes()[node_indices[0]],
-                                                                     mesh->getNodes()[node_indices[1]]
+                                mesh->addElement(std::make_unique<LineElement>(mesh->getElements().size(), std::vector<Node*>{
+                                                                     mesh->getNodes()[node_indices[0]].get(),
+                                                                     mesh->getNodes()[node_indices[1]].get()
                                                                  }));
                             } else if (vertices_per_element == 3) {
                                 // 三角形单元
-                                mesh->addElement(new TriElement(mesh->getElements().size(), {
-                                                                    mesh->getNodes()[node_indices[0]],
-                                                                    mesh->getNodes()[node_indices[1]],
-                                                                    mesh->getNodes()[node_indices[2]]
+                                mesh->addElement(std::make_unique<TriElement>(mesh->getElements().size(), std::vector<Node*>{
+                                                                    mesh->getNodes()[node_indices[0]].get(),
+                                                                    mesh->getNodes()[node_indices[1]].get(),
+                                                                    mesh->getNodes()[node_indices[2]].get()
                                                                 }));
                             } else if (vertices_per_element == 4) {
                                 // 四面体单元
-                                mesh->addElement(new TetraElement(mesh->getElements().size(), {
-                                                                      mesh->getNodes()[node_indices[0]],
-                                                                      mesh->getNodes()[node_indices[1]],
-                                                                      mesh->getNodes()[node_indices[2]],
-                                                                      mesh->getNodes()[node_indices[3]]
+                                mesh->addElement(std::make_unique<TetraElement>(mesh->getElements().size(), std::vector<Node*>{
+                                                                      mesh->getNodes()[node_indices[0]].get(),
+                                                                      mesh->getNodes()[node_indices[1]].get(),
+                                                                      mesh->getNodes()[node_indices[2]].get(),
+                                                                      mesh->getNodes()[node_indices[3]].get()
                                                                   }));
                             }
                         }
@@ -296,7 +296,7 @@ namespace FEM::IO {
                 double x, y, z;
                 int points_read = 0;
                 while (data_ss >> x >> y >> z && points_read < num_points) {
-                    mesh->addNode(new Node(points_read, {x, y, z}));
+                    mesh->addNode(std::make_unique<Node>(points_read, std::vector<double>{x, y, z}));
                     points_read++;
                 }
 
@@ -440,21 +440,21 @@ namespace FEM::IO {
             switch (type) {
                 case 5: // triangle
                     if (offset == 3) {
-                        mesh->addElement(new TriElement(i, {
-                                                            mesh->getNodes()[connectivity[conn_index]],
-                                                            mesh->getNodes()[connectivity[conn_index + 1]],
-                                                            mesh->getNodes()[connectivity[conn_index + 2]]
+                        mesh->addElement(std::make_unique<TriElement>(i, std::vector<Node*>{
+                                                            mesh->getNodes()[connectivity[conn_index]].get(),
+                                                            mesh->getNodes()[connectivity[conn_index + 1]].get(),
+                                                            mesh->getNodes()[connectivity[conn_index + 2]].get()
                                                         }));
                         conn_index += 3;
                     }
                     break;
                 case 10: // tetrahedron
                     if (offset == 4) {
-                        mesh->addElement(new TetraElement(i, {
-                                                              mesh->getNodes()[connectivity[conn_index]],
-                                                              mesh->getNodes()[connectivity[conn_index + 1]],
-                                                              mesh->getNodes()[connectivity[conn_index + 2]],
-                                                              mesh->getNodes()[connectivity[conn_index + 3]]
+                        mesh->addElement(std::make_unique<TetraElement>(i, std::vector<Node*>{
+                                                              mesh->getNodes()[connectivity[conn_index]].get(),
+                                                              mesh->getNodes()[connectivity[conn_index + 1]].get(),
+                                                              mesh->getNodes()[connectivity[conn_index + 2]].get(),
+                                                              mesh->getNodes()[connectivity[conn_index + 3]].get()
                                                           }));
                         conn_index += 4;
                     }
@@ -578,7 +578,7 @@ namespace FEM::IO {
                 double x, y, z;
                 int points_read = 0;
                 while (data_ss >> x >> y >> z && points_read < num_points) {
-                    mesh->addNode(new Node(points_read, {x, y, z}));
+                    mesh->addNode(std::make_unique<Node>(points_read, std::vector<double>{x, y, z}));
                     points_read++;
                 }
 
@@ -732,21 +732,21 @@ namespace FEM::IO {
             switch (type) {
                 case 5: // triangle
                     if (offset == 3) {
-                        mesh->addElement(new TriElement(i, {
-                                                            mesh->getNodes()[connectivity[conn_index]],
-                                                            mesh->getNodes()[connectivity[conn_index + 1]],
-                                                            mesh->getNodes()[connectivity[conn_index + 2]]
+                        mesh->addElement(std::make_unique<TriElement>(i, std::vector<Node*>{
+                                                            mesh->getNodes()[connectivity[conn_index]].get(),
+                                                            mesh->getNodes()[connectivity[conn_index + 1]].get(),
+                                                            mesh->getNodes()[connectivity[conn_index + 2]].get()
                                                         }));
                         conn_index += 3;
                     }
                     break;
                 case 10: // tetrahedron
                     if (offset == 4) {
-                        mesh->addElement(new TetraElement(i, {
-                                                              mesh->getNodes()[connectivity[conn_index]],
-                                                              mesh->getNodes()[connectivity[conn_index + 1]],
-                                                              mesh->getNodes()[connectivity[conn_index + 2]],
-                                                              mesh->getNodes()[connectivity[conn_index + 3]]
+                        mesh->addElement(std::make_unique<TetraElement>(i, std::vector<Node*>{
+                                                              mesh->getNodes()[connectivity[conn_index]].get(),
+                                                              mesh->getNodes()[connectivity[conn_index + 1]].get(),
+                                                              mesh->getNodes()[connectivity[conn_index + 2]].get(),
+                                                              mesh->getNodes()[connectivity[conn_index + 3]].get()
                                                           }));
                         conn_index += 4;
                     }

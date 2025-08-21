@@ -4,18 +4,19 @@
 
 namespace FEM {
 
-    Mesh::~Mesh() {
-        for (auto p : nodes_) delete p;
-        for (auto p : elements_) delete p;
+    // 析构函数现在为空，因为智能指针会自动管理内存
+    // Mesh::~Mesh() {
+    //     for (auto p : nodes_) delete p;
+    //     for (auto p : elements_) delete p;
+    // }
+
+    void Mesh::addNode(std::unique_ptr<Node> node) {
+        node_map_[node->getId()] = node.get(); // 填充 map
+        nodes_.push_back(std::move(node));
     }
 
-    void Mesh::addNode(Node* node) {
-        nodes_.push_back(node);
-        node_map_[node->getId()] = node; // 填充 map
-    }
-
-    void Mesh::addElement(Element* element) {
-        elements_.push_back(element);
+    void Mesh::addElement(std::unique_ptr<Element> element) {
+        elements_.push_back(std::move(element));
     }
 
     Node* Mesh::getNodeById(int id) const {
@@ -30,10 +31,10 @@ namespace FEM {
         auto mesh = std::make_unique<Mesh>();
         double h = length / num_elements;
         for (int i = 0; i <= num_elements; ++i) {
-            mesh->addNode(new Node(i, {i * h}));
+            mesh->addNode(std::make_unique<Node>(i, std::vector<double>{i * h}));
         }
         for (int i = 0; i < num_elements; ++i) {
-            mesh->addElement(new LineElement(i, {mesh->getNodeById(i), mesh->getNodeById(i + 1)}));
+            mesh->addElement(std::make_unique<LineElement>(i, std::vector<Node*>{mesh->getNodeById(i), mesh->getNodeById(i + 1)}));
         }
         
         // 添加边界信息
@@ -52,7 +53,7 @@ namespace FEM {
         int node_id_counter = 0;
         for (int j = 0; j <= ny; ++j) {
             for (int i = 0; i <= nx; ++i) {
-                mesh->addNode(new Node(node_id_counter++, {i * dx, j * dy}));
+                mesh->addNode(std::make_unique<Node>(node_id_counter++, std::vector<double>{i * dx, j * dy}));
             }
         }
         int elem_id_counter = 0;
@@ -62,7 +63,7 @@ namespace FEM {
                 int n1_id = j * (nx + 1) + i + 1;
                 int n2_id = (j + 1) * (nx + 1) + i + 1;
                 int n3_id = (j + 1) * (nx + 1) + i;
-                mesh->addElement(new QuadElement(elem_id_counter++, {
+                mesh->addElement(std::make_unique<QuadElement>(elem_id_counter++, std::vector<Node*>{
                     mesh->getNodeById(n0_id), mesh->getNodeById(n1_id),
                     mesh->getNodeById(n2_id), mesh->getNodeById(n3_id)
                 }));
@@ -99,7 +100,7 @@ namespace FEM {
         for(int k=0; k<=nz; ++k) {
             for(int j=0; j<=ny; ++j) {
                 for(int i=0; i<=nx; ++i) {
-                    mesh->addNode(new Node(node_id_counter++, {i * dx, j * dy, k * dz}));
+                    mesh->addNode(std::make_unique<Node>(node_id_counter++, std::vector<double>{i * dx, j * dy, k * dz}));
                 }
             }
         }
@@ -117,7 +118,7 @@ namespace FEM {
                     n_ids[6] = (k + 1) * (nx + 1) * (ny + 1) + (j + 1) * (nx + 1) + i + 1;
                     n_ids[7] = (k + 1) * (nx + 1) * (ny + 1) + (j + 1) * (nx + 1) + i;
 
-                    mesh->addElement(new HexaElement(elem_id_counter++, {
+                    mesh->addElement(std::make_unique<HexaElement>(elem_id_counter++, std::vector<Node*>{
                         mesh->getNodeById(n_ids[0]), mesh->getNodeById(n_ids[1]),
                         mesh->getNodeById(n_ids[2]), mesh->getNodeById(n_ids[3]),
                         mesh->getNodeById(n_ids[4]), mesh->getNodeById(n_ids[5]),

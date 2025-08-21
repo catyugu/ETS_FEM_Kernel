@@ -12,11 +12,11 @@ namespace FEM {
 
     class Mesh {
     public:
-        ~Mesh();
-        void addNode(Node* node);
-        void addElement(Element* element);
-        const std::vector<Node*>& getNodes() const { return nodes_; }
-        const std::vector<Element*>& getElements() const { return elements_; }
+        ~Mesh() = default; // 使用默认析构函数，智能指针会自动管理内存
+        void addNode(std::unique_ptr<Node> node);
+        void addElement(std::unique_ptr<Element> element);
+        const std::vector<std::unique_ptr<Node>>& getNodes() const { return nodes_; }
+        const std::vector<std::unique_ptr<Element>>& getElements() const { return elements_; }
         Node* getNodeById(int id) const;
 
         // --- 静态工厂方法 (添加缺失的声明) ---
@@ -65,8 +65,8 @@ namespace FEM {
         }
 
     private:
-        std::vector<Node*> nodes_;
-        std::vector<Element*> elements_;
+        std::vector<std::unique_ptr<Node>> nodes_;
+        std::vector<std::unique_ptr<Element>> elements_;
         std::map<int, Node*> node_map_;
         
         // key 是边界名称, value 是构成该边界的单元列表

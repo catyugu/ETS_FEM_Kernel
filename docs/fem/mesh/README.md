@@ -52,14 +52,16 @@ const auto& boundary_nodes = mesh->getBoundaryNodes("boundary_name");
 auto mesh = std::make_unique<Mesh>();
 
 // 添加节点和单元
-mesh->addNode(new Node(0, {0.0, 0.0}));
-mesh->addNode(new Node(1, {1.0, 0.0}));
-mesh->addNode(new Node(2, {1.0, 1.0}));
-mesh->addNode(new Node(3, {0.0, 1.0}));
+mesh->addNode(std::make_unique<Node>(0, std::vector<double>{0.0, 0.0}));
+mesh->addNode(std::make_unique<Node>(1, std::vector<double>{1.0, 0.0}));
+mesh->addNode(std::make_unique<Node>(2, std::vector<double>{1.0, 1.0}));
+mesh->addNode(std::make_unique<Node>(3, std::vector<double>{0.0, 1.0}));
 
-mesh->addElement(new QuadElement(0, {node0, node1, node2, node3}));
+std::vector<FEM::Node*> nodes = {mesh->getNodes()[0].get(), mesh->getNodes()[1].get(), 
+                                 mesh->getNodes()[2].get(), mesh->getNodes()[3].get()};
+mesh->addElement(std::make_unique<QuadElement>(0, nodes));
 
 // 添加边界信息
-mesh->addBoundaryElement("bottom", std::make_unique<LineElement>(0, {node0, node1}));
-mesh->addBoundaryElement("top", std::make_unique<LineElement>(1, {node2, node3}));
+std::vector<FEM::Node*> boundary_nodes = {mesh->getNodes()[0].get(), mesh->getNodes()[1].get()};
+mesh->addBoundaryElement("bottom", std::make_unique<LineElement>(0, boundary_nodes));
 ```

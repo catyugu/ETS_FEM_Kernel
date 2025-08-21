@@ -23,13 +23,13 @@ class Element
 
 ## 构造函数
 
-### Element(int id, const std::vector<std::shared_ptr<Node>>& nodes)
+### Element(int id, const std::vector<Node*>& nodes)
 
 构造函数，使用给定的ID和节点数组初始化单元对象。
 
 **参数:**
 - `id` - 单元的唯一标识符
-- `nodes` - 构成单元的节点智能指针数组
+- `nodes` - 构成单元的节点指针数组
 
 ## 成员函数
 
@@ -44,60 +44,60 @@ class Element
 **返回值:**
 - 单元的唯一标识符
 
-### const std::vector<std::shared_ptr<Node>>& getNodes() const
+### const std::vector<Node*>& getNodes() const
 
 获取单元节点。
 
 **返回值:**
-- 构成单元的节点智能指针数组的常量引用
+- 构成单元的节点指针数组的常量引用
 
 ### virtual int getNumNodes() const = 0
 
-纯虚函数，获取单元节点数量。由派生类实现。
+获取单元节点数量的纯虚函数，由派生类实现。
 
 **返回值:**
-- 单元节点数量
+- 单元包含的节点数量
+
+### int getNodeId(size_t index) const
+
+获取指定索引的节点ID。
+
+**参数:**
+- `index` - 节点索引
+
+**返回值:**
+- 指定索引节点的ID
+
+**异常:**
+- `std::out_of_range` - 当索引超出范围时抛出
 
 ### virtual ElementType getType() const = 0
 
-纯虚函数，获取单元类型。由派生类实现。
+获取单元类型的纯虚函数，由派生类实现。
 
 **返回值:**
 - 单元类型枚举值
 
 ## 派生类
 
-### LineElement
-
-线单元类，表示由2个节点组成的线段单元。
-
-### TriElement
-
-三角形单元类，表示由3个节点组成的三角形单元。
-
-### QuadElement
-
-四边形单元类，表示由4个节点组成的四边形单元。
-
-### TetrahedronElement
-
-四面体单元类，表示由4个节点组成的四面体单元。
-
-### HexaElement
-
-六面体单元类，表示由8个节点组成的六面体单元。
+- `PointElement` - 点单元，包含1个节点
+- `LineElement` - 线单元，包含2个节点
+- `TriElement` - 三角形单元，包含3个节点
+- `QuadElement` - 四边形单元，包含4个节点
+- `TetraElement` - 四面体单元，包含4个节点
+- `HexaElement` - 六面体单元，包含8个节点
 
 ## 示例用法
 
 ```cpp
-// 假设已经有节点对象
-auto node1 = std::make_shared<FEM::Node>(1, std::vector<double>{0.0, 0.0});
-auto node2 = std::make_shared<FEM::Node>(2, std::vector<double>{1.0, 0.0});
-auto node3 = std::make_shared<FEM::Node>(3, std::vector<double>{0.0, 1.0});
+// 创建节点
+auto node1 = std::make_unique<FEM::Node>(1, std::vector<double>{0.0, 0.0});
+auto node2 = std::make_unique<FEM::Node>(2, std::vector<double>{1.0, 0.0});
+auto node3 = std::make_unique<FEM::Node>(3, std::vector<double>{0.0, 1.0});
 
 // 创建三角形单元
-std::vector<std::shared_ptr<FEM::Node>> nodes = {node1, node2, node3};
-auto triangle = std::make_shared<FEM::TriElement>(1, nodes);
+std::vector<FEM::Node*> nodes = {node1.get(), node2.get(), node3.get()};
+auto element = std::make_unique<FEM::TriElement>(1, nodes);
 
 // 获取单元信息
 int id = triangle->getId();
@@ -115,4 +115,4 @@ const auto& element_nodes = triangle->getNodes();
 ## 依赖关系
 
 - [Node](Node.md) - 节点类
-- STL - 向量等标准库组件
+- STL - 向量、异常等标准库组件
