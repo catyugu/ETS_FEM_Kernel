@@ -5,38 +5,50 @@
 #include <complex>
 
 namespace FEM {
-    template<int TDim, int TNumNodes_, typename TScalar = double>
-    class HeatCapacityKernel : public Kernel<TDim, TNumNodes_, TScalar> {
+    template<int TDim, typename TScalar = double>
+    class HeatCapacityKernel : public Kernel<TDim, TScalar> {
     public:
-        using MatrixType = typename Kernel<TDim, TNumNodes_, TScalar>::MatrixType;
+        using MatrixType = typename Kernel<TDim, TScalar>::MatrixType;
 
-        HeatCapacityKernel(const Material& material, double omega) : material_(material), omega_(omega) {}
+        // 构造函数支持频率参数（用于频域分析）
+        explicit HeatCapacityKernel(const Material& material, double omega = 0.0) 
+            : mat_(material), omega_(omega) {}
 
         MatrixType compute_element_matrix(const Element& element) override {
-            FEValues fe_values(element, 1, AnalysisType::SCALAR_DIFFUSION);
-            MatrixType M_elem = MatrixType::Zero();
+            // 在运行时获取节点数
+            const int num_nodes = element.getNumNodes();
 
-            const double rho = material_.getProperty("density").evaluate();
-            const double c = material_.getProperty("specific_heat").evaluate();
-            
-            // 频域项: j * omega * rho * c
-            const TScalar coeff = TScalar(0.0, 1.0) * static_cast<TScalar>(omega_ * rho * c);
+            MatrixType C_elem = MatrixType::Zero(num_nodes, num_nodes);
+
+            FEValues fe_values(element, 1, AnalysisType::SCALAR_DIFFUSION);
+            const MaterialProperty& rho_prop = mat_.getProperty("density");
+            const MaterialProperty& cp_prop = mat_.getProperty("specific_heat");
 
             for (size_t q = 0; q < fe_values.n_quad_points(); ++q) {
                 fe_values.reinit(q);
-                TScalar JxW = static_cast<TScalar>(fe_values.JxW());
-                for (size_t i = 0; i < TNumNodes_; ++i) {
-                    for (size_t j = 0; j < TNumNodes_; ++j) {
-                        // M_ij = ∫(coeff * Ni * Nj) dV
-                        M_elem(i, j) += coeff * static_cast<TScalar>(fe_values.N()(i) * fe_values.N()(j)) * JxW;
-                    }
+
+                double rho = rho_prop.evaluate();
+                double cp = cp_prop.evaluate();
+
+                // --- 一致的质量矩阵 ---
+                const auto& N = fe_values.N(); // 形函数值 (VectorXd)
+                double JxW = fe_values.JxW();
+
+                // 对于频域分析，需要乘以j*omega
+                TScalar factor = static_cast<TScalar>(rho * cp);
+                if (omega_ != 0.0) {
+                    // 在频域分析中，质量矩阵需要乘以j*omega
+                    factor *= TScalar(0.0, omega_);
                 }
+
+                // C_elem += factor * N * N^T * dV
+                C_elem += factor * N * N.transpose() * static_cast<TScalar>(JxW);
             }
-            return M_elem;
+            return C_elem;
         }
 
     private:
-        const Material& material_;
-        double omega_; // 角频率
+        const Material& mat_;
+        double omega_ = 0.0; // 频率参数，用于频域分析
     };
 }

@@ -24,7 +24,7 @@ protected:
     void SetUp() override {
         // 创建铜材料并设置电导率
         material = std::make_unique<Material>("Copper");
-        material->setProperty("electrical_conductivity", 5.96e7); // S/m
+        material->setProperty("permittivity", 5.96e7); // S/m
     }
 
     std::unique_ptr<Material> material;
@@ -57,7 +57,7 @@ TEST_F(TestElectrostatics, SolveElectrostaticsOnImportedMesh) {
 
         constexpr int num_nodes_per_elem = 4;
         physics->addKernel(
-            std::make_unique<ElectrostaticsKernel<dim, num_nodes_per_elem>>(*material)
+            std::make_unique<ElectrostaticsKernel<dim>>(*material)
         );
 
         // 使用基于坐标的边界条件设置

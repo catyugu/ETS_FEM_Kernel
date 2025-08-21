@@ -4,18 +4,22 @@
 
 `Electrostatics` 类实现了静电场问题的有限元求解。它继承自 [PhysicsField](PhysicsField.md) 抽象基类，用于计算在给定边界条件下的电势分布。该类使用内核机制来处理不同类型的单元和计算任务。
 
+与之前版本相比，该类现在实现了单元类型过滤机制，确保只有适当类型的单元参与域内组装。
+
 ## 类签名
 
 ```cpp
-template<int TDim>
-class Electrostatics : public PhysicsField<TDim> {
+template<int TDim, typename TScalar = double>
+class Electrostatics : public PhysicsField<TDim, TScalar> {
 public:
     template<typename KernelType>
     void addKernel(std::unique_ptr<KernelType> kernel);
     
-    void assemble(const Mesh& mesh, const DofManager& dof_manager,
-                  Eigen::SparseMatrix<double>& K_global, Eigen::VectorXd& F_global) override;
+    void assemble_volume(const Mesh& mesh, const DofManager& dof_manager,
+                  Eigen::SparseMatrix<TScalar>& K_global, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) override;
                   
+    bool shouldAssembleElement(const Element& element, int problem_dim) const;
+    
     std::string getName() const override;
 };
 ```
@@ -38,24 +42,44 @@ void addKernel(std::unique_ptr<KernelType> kernel);
 ```cpp
 auto electrostatics = std::make_unique<FEM::Electrostatics<2>>();
 electrostatics->addKernel(
-    std::make_unique<FEM::ElectrostaticsKernel<2, 4>>(material)
+    std::make_unique<FEM::ElectrostaticsKernel<2>>(material)
 );
 ```
 
-### assemble
+### assemble_volume
 
 ```cpp
-void assemble(const Mesh& mesh, const DofManager& dof_manager,
-              Eigen::SparseMatrix<double>& K_global, Eigen::VectorXd& F_global) override;
+void assemble_volume(const Mesh& mesh, const DofManager& dof_manager,
+              Eigen::SparseMatrix<TScalar>& K_global, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) override;
 ```
 
-**描述**: 实现基类的纯虚函数，负责组装静电场问题的全局刚度矩阵和载荷向量。
+**描述**: 组装全局刚度矩阵和载荷向量。与之前版本相比，该方法现在会过滤单元类型，只对适当类型的单元进行组装。
 
 **参数**:
-- `mesh` - 网格对象
-- `dof_manager` - 自由度管理器
-- `K_global` - 全局刚度矩阵（输出）
-- `F_global` - 全局载荷向量（输出）
+- `mesh` - 网格对象的常量引用
+- `dof_manager` - 自由度管理器的常量引用
+- `K_global` - 全局刚度矩阵的引用
+- `F_global` - 全局载荷向量的引用
+
+与之前版本相比，该方法现在会过滤单元类型，只对适当类型的单元进行组装：
+- 一维问题：只组装线单元
+- 二维问题：只组装三角形和四边形单元
+- 三维问题：只组装四面体和六面体单元
+
+### shouldAssembleElement
+
+```cpp
+bool shouldAssembleElement(const Element& element, int problem_dim) const;
+```
+
+**描述**: 判断单元是否应该参与组装。
+
+**参数**:
+- `element` - 单元对象的常量引用
+- `problem_dim` - 问题维度
+
+**返回值**:
+- 布尔值，指示单元是否应该参与组装
 
 ### getName
 
@@ -63,40 +87,26 @@ void assemble(const Mesh& mesh, const DofManager& dof_manager,
 std::string getName() const override;
 ```
 
-**描述**: 返回物理场的名称。
+**描述**: 获取物理场名称。
 
-**返回值**: 字符串 "Electrostatics"
+**返回值**:
+- 字符串 "Electrostatics"
 
-## 示例用法
+## 实现细节
 
-```cpp
-#include "fem/physics/Electrostatics.hpp"
-#include "fem/kernels/ElectrostaticsKernel.hpp"
+与之前版本相比，该类的主要变化包括：
 
-// 创建静电场物理问题
-auto electrostatics_physics = std::make_unique<FEM::Electrostatics<2>>();
+1. 实现了单元类型过滤机制，确保只有适当类型的单元参与域内组装
+2. 添加了 [shouldAssembleElement](file:///E:/code/cpp/ETS_FEM_Kernel/fem/physics/Electrostatics.hpp#L58-L75) 方法，用于判断单元是否应该参与组装
+3. 移除了硬编码的节点数
 
-// 添加计算内核
-electrostatics_physics->addKernel(
-    std::make_unique<FEM::ElectrostaticsKernel<2, 4>>(material)
-);
+这些改进使得物理场可以处理混合网格，即同时包含不同类型和节点数的单元，并确保只有适当类型的单元参与计算。
 
-// 创建问题实例
-auto problem = std::make_unique<FEM::Problem<2>>(std::move(mesh), std::move(electrostatics_physics));
+## 依赖关系
 
-// 设置边界条件
-problem->addDirichletBC(0, 10.0);  // 10V
-problem->addDirichletBC(10, 0.0);  // 0V (地)
-
-// 求解
-problem->assemble();
-problem->applyBCs();
-problem->solve();
-```
-
-## 注意事项
-
-1. 该类使用模板参数 `TDim` 表示问题的维度（1D、2D或3D）
-2. 使用 [KernelWrapper](../../kernels/classes/KernelWrappers.md) 机制来管理不同类型的内核
-3. 需要与 [ElectrostaticsKernel](../../kernels/classes/ElectrostaticsKernel.md) 配合使用以获得正确的物理计算
-4. 电势的单位是伏特(V)
+- [PhysicsField](PhysicsField.md) - 基类
+- [Kernel](../../kernels/classes/Kernel.md) - 内核基类
+- [IKernel](../../kernels/classes/KernelWrappers.md) - 内核接口
+- [KernelWrapper](../../kernels/classes/KernelWrappers.md) - 内核包装器
+- [Mesh](../../mesh/classes/Mesh.md) - 网格
+- [DofManager](../../core/classes/DofManager.md) - 自由度管理器

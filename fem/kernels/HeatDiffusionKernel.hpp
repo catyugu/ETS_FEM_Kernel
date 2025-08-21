@@ -5,16 +5,18 @@
 #include <complex>
 
 namespace FEM {
-    template<int TDim, int TNumNodes, typename TScalar = double>
-    class HeatDiffusionKernel : public Kernel<TDim, TNumNodes, TScalar> {
+    template<int TDim, typename TScalar = double>
+    class HeatDiffusionKernel : public Kernel<TDim, TScalar> {
     public:
-        using MatrixType = typename Kernel<TDim, TNumNodes, TScalar>::MatrixType;
+        using MatrixType = typename Kernel<TDim, TScalar>::MatrixType;
 
         explicit HeatDiffusionKernel(const Material& material) : mat_(material) {}
 
         MatrixType compute_element_matrix(const Element& element) override {
-            MatrixType K_elem;
-            K_elem.setZero();
+            // 在运行时获取节点数
+            const int num_nodes = element.getNumNodes();
+
+            MatrixType K_elem = MatrixType::Zero(num_nodes, num_nodes);
 
             // FEValues 不再需要知道分析类型来构建B矩阵
             FEValues fe_values(element, 1, AnalysisType::SCALAR_DIFFUSION);

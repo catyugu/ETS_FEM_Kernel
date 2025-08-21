@@ -32,10 +32,10 @@ TEST(FrequencyDomainTest, 1DHeatWave) {
 
     // 4. 添加稳态和频域 Kernels
     heat_physics->addKernel(
-        std::make_unique<FEM::HeatDiffusionKernel<dim, 2, ComplexScalar>>(material)
+        std::make_unique<FEM::HeatDiffusionKernel<dim, ComplexScalar>>(material)
     );
     heat_physics->addKernel(
-        std::make_unique<FEM::HeatCapacityKernel<dim, 2, ComplexScalar>>(material, omega)
+        std::make_unique<FEM::HeatCapacityKernel<dim, ComplexScalar>>(material, omega)
     );
 
     // 5. 添加边界条件

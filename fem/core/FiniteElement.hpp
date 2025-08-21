@@ -161,6 +161,8 @@ namespace FEM {
     // 实现FiniteElement的create函数
     inline std::unique_ptr<FiniteElement> FiniteElement::create(ElementType type, int order) {
         switch (type) {
+            case ElementType::Point:
+                return std::make_unique<FiniteElementImpl<ElementType::Point, 1>>(order);
             case ElementType::Line:
                 return std::make_unique<FiniteElementImpl<ElementType::Line, 2>>(order);
             case ElementType::Triangle:

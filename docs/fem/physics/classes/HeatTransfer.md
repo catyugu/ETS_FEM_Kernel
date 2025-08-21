@@ -4,6 +4,8 @@
 
 `HeatTransfer` 类表示热传导物理问题，负责管理热传导分析的内核并执行全局矩阵组装。该类使用模板设计，支持不同维度的热传导问题。通过 [IKernel](../../kernels/classes/KernelWrappers.md) 抽象接口和 [KernelWrapper](../../kernels/classes/KernelWrappers.md) 包装器，可以支持不同节点数的单元类型。
 
+与之前版本相比，该类现在实现了单元类型过滤机制，确保只有适当类型的单元参与域内组装。
+
 ## 类定义
 
 ```cpp
@@ -37,6 +39,22 @@ class HeatTransfer : public PhysicsField<TDim, TScalar>
 - `K_global` - 全局刚度矩阵的引用
 - `F_global` - 全局载荷向量的引用
 
+与之前版本相比，该方法现在会过滤单元类型，只对适当类型的单元进行组装：
+- 一维问题：只组装线单元
+- 二维问题：只组装三角形和四边形单元
+- 三维问题：只组装四面体和六面体单元
+
+### bool shouldAssembleElement(const Element& element, int problem_dim) const
+
+判断单元是否应该参与组装。
+
+**参数:**
+- `element` - 单元对象的常量引用
+- `problem_dim` - 问题维度
+
+**返回值:**
+- 布尔值，指示单元是否应该参与组装
+
 ### std::string getName() const
 
 获取物理场名称。
@@ -44,22 +62,28 @@ class HeatTransfer : public PhysicsField<TDim, TScalar>
 **返回值:**
 - 字符串 "HeatTransfer"
 
+## 实现细节
+
+与之前版本相比，该类的主要变化包括：
+
+1. 实现了单元类型过滤机制，确保只有适当类型的单元参与域内组装
+2. 添加了 [shouldAssembleElement](file:///E:/code/cpp/ETS_FEM_Kernel/fem/physics/HeatTransfer.hpp#L55-L72) 方法，用于判断单元是否应该参与组装
+3. 移除了硬编码的节点数2
+
+这些改进使得物理场可以处理混合网格，即同时包含不同类型和节点数的单元，并确保只有适当类型的单元参与计算。
+
 ## 示例用法
 
 ```cpp
 // 创建热传导问题对象
 auto heat_transfer = std::make_unique<FEM::HeatTransfer<2>>();
-
-// 创建并添加热传导内核
-auto kernel = std::make_unique<FEM::HeatDiffusionKernel<2, 3>>(material);
-heat_transfer->addKernel(std::move(kernel));
-
-// 组装全局矩阵
-auto mesh = std::make_unique<FEM::Mesh>();
-FEM::DofManager dof_manager(*mesh);
-dof_manager.buildDofMap(1);
-
-Eigen::SparseMatrix<double> K_global;
-Eigen::VectorXd F_global;
-heat_transfer->assemble(*mesh, dof_manager, K_global, F_global);
 ```
+
+## 依赖关系
+
+- [PhysicsField](PhysicsField.md) - 基类
+- [Kernel](../../kernels/classes/Kernel.md) - 内核基类
+- [IKernel](../../kernels/classes/KernelWrappers.md) - 内核接口
+- [KernelWrapper](../../kernels/classes/KernelWrappers.md) - 内核包装器
+- [Mesh](../../mesh/classes/Mesh.md) - 网格
+- [DofManager](../../core/classes/DofManager.md) - 自由度管理器

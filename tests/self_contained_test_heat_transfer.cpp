@@ -16,7 +16,7 @@ void test_heat_transfer() {
     material->setProperty("thermal_conductivity", 1.0);
 
     auto physics = std::make_unique<FEM::HeatTransfer<dim>>();
-    physics->addKernel(std::make_unique<FEM::HeatDiffusionKernel<dim, 2>>(*material));
+    physics->addKernel(std::make_unique<FEM::HeatDiffusionKernel<dim>>(*material));
 
     // 使用物理场管理边界条件
     // 注意：对于程序生成的简单网格，我们使用假的边界名称
@@ -64,7 +64,7 @@ TEST_F(HeatTransferTest, Solves2DProblem) {
     auto physics = std::make_unique<FEM::HeatTransfer<dim>>();
 
     physics->addKernel(
-        std::make_unique<FEM::HeatDiffusionKernel<dim, num_nodes_per_elem>>(*material)
+        std::make_unique<FEM::HeatDiffusionKernel<dim>>(*material)
     );
 
     // 添加边界条件 - 使用物理场管理
@@ -100,7 +100,7 @@ TEST_F(HeatTransferTest, Solves3DProblem) {
     auto physics = std::make_unique<FEM::HeatTransfer<dim>>();
 
     physics->addKernel(
-        std::make_unique<FEM::HeatDiffusionKernel<dim, num_nodes_per_elem>>(*material)
+        std::make_unique<FEM::HeatDiffusionKernel<dim>>(*material)
     );
 
     // 添加边界条件 - 使用物理场管理
