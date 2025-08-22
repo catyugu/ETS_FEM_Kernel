@@ -1,8 +1,8 @@
-﻿#pragma once
+#pragma once
 
 #include "../core/BoundaryCondition.hpp"
 #include "../mesh/Geometry.hpp"
-#include "../core/FEFaceValues.hpp"
+#include "../core/FEValues.hpp"
 #include <complex>
 
 namespace FEM {
@@ -20,16 +20,17 @@ namespace FEM {
             const auto& boundary_elements = geometry.getBoundary(this->boundary_name_).getElements();
             for (const auto& elem_ptr : boundary_elements) {
                 const Element& face_element = *elem_ptr;
-                FEFaceValues fe_face_values(face_element, 1, AnalysisType::SCALAR_DIFFUSION);
+                FEValues fe_values(face_element, 1, AnalysisType::SCALAR_DIFFUSION);
                 Eigen::Matrix<TScalar, Eigen::Dynamic, 1> F_elem_bc = Eigen::Matrix<TScalar, Eigen::Dynamic, 1>::Zero(face_element.getNumNodes());
 
-                for (size_t q = 0; q < fe_face_values.n_quad_points(); ++q) {
-                    fe_face_values.reinit(q);
-                    auto JxW = static_cast<TScalar>(fe_face_values.JxW());
+                size_t q_index = 0;
+                for (const auto& q_point : fe_values) {
+                    auto JxW = static_cast<TScalar>(q_point.JxW());
                     for (size_t i = 0; i < face_element.getNumNodes(); ++i) {
                         // 关键修正：必须是加法。热流是源项。
-                        F_elem_bc(i) += value_ * static_cast<TScalar>(fe_face_values.shape_value(i, q)) * JxW;
+                        F_elem_bc(i) += value_ * static_cast<TScalar>(fe_values.shape_value(i, q_index)) * JxW;
                     }
+                    ++q_index;
                 }
 
                 for (size_t i = 0; i < face_element.getNumNodes(); ++i) {

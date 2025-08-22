@@ -22,17 +22,15 @@ namespace FEM {
             FEValues fe_values(element, AnalysisType::SCALAR_DIFFUSION);
             const MaterialProperty& eps_prop = mat_.getProperty("permittivity");
 
-            for (size_t q = 0; q < fe_values.n_quad_points(); ++q) {
-                fe_values.reinit(q);
-
+            for (const auto& q_point : fe_values) {
                 double eps = eps_prop.evaluate();
 
                 // --- 正确的实现 ---
-                const auto& B = fe_values.dN_dx();
+                const auto& B = q_point.dN_dx();
                 auto D = static_cast<TScalar>(eps); // 材料本构关系 (对于静电是标量)
 
                 // --- 通用形式： K_elem += B^T * D * B * dV ---
-                K_elem += (B.transpose() * D * B) * static_cast<TScalar>(fe_values.JxW());
+                K_elem += (B.transpose() * D * B) * static_cast<TScalar>(q_point.JxW());
             }
             return K_elem;
         }

@@ -67,21 +67,20 @@ K_e = ∫(B^T * D * B) dV
 FEM::Material copper("Copper");
 copper.setProperty("electrical_conductivity", 5.96e7); // S/m
 
-// 创建静电场内核（2D，4节点单元）
-auto kernel = std::make_unique<FEM::ElectrostaticsKernel<2, 4>>(copper);
+// 创建静电场内核
+auto electrostatics_kernel = std::make_unique<FEM::ElectrostaticsKernel<3>>(copper);
 
-// 在物理场中使用内核
-auto electrostatics = std::make_unique<FEM::Electrostatics<2>>();
-electrostatics->addKernel(std::move(kernel));
+// 将内核添加到问题中
+problem.addKernel(std::move(electrostatics_kernel));
 ```
 
 ## 注意事项
 
-1. 该类使用模板参数 `TDim` 表示问题的维度，`TNumNodes` 表示单元节点数
+1. 该类使用模板参数 `TDim` 表示问题的维度
 2. 材料必须包含"electrical_conductivity"属性，单位为西门子每米(S/m)
 3. 该内核适用于标量静电场问题
 4. 计算假设电导率在单元内为常数
-5. 使用 [FEValues](../../core/classes/FEValues.md) 类进行有限元值计算
+5. 使用 [FEValues](../../core/classes/FEValues.md) 类的现代迭代器接口进行有限元值计算
 
 ## 依赖关系
 

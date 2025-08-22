@@ -111,12 +111,11 @@ ETS_FEM_Kernel 是一个有限元方法（FEM）计算内核的 C++ 实现，用
   - [AnalysisTypes](fem/core/classes/AnalysisTypes.md) - 分析类型枚举
   - [BoundaryCondition](fem/core/classes/BoundaryCondition.md) - 边界条件抽象基类
   - [DofManager](fem/core/classes/DofManager.md) - 自由度管理器
-  - [FEFaceValues](fem/core/classes/FEFaceValues.md) - 有限元面值计算类
   - [FEValues](fem/core/classes/FEValues.md) - 有限元值计算类
   - [LinearSolver](fem/core/classes/LinearSolver.md) - 线性求解器接口
   - [Problem](fem/core/classes/Problem.md) - 有限元问题主控制器类
   - [ReferenceElement](fem/core/classes/ReferenceElement.md) - 参考单元类
-
+  - [QuadraturePoint](fem/core/classes/QuadraturePoint.md) - 积分点类
 - [IO](fem/io/README.md) - 输入输出功能
   - [Exporter](fem/io/classes/Exporter.md) - 数据导出器
   - [Importer](fem/io/classes/Importer.md) - 数据导入器

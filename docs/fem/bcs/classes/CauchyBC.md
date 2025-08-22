@@ -72,15 +72,11 @@ BCType getType() const override
 #include "fem/bcs/CauchyBC.hpp"
 
 // 创建对流换热边界条件
-auto convection_bc = std::make_unique<CauchyBC<3>>("cooling_surface", 25.0, 293.15); 
+auto convection_bc = std::make_unique<FEM::CauchyBC<3, double>>("cooling_surface", 25.0, 293.15); 
 // 换热系数 25 W/(m²·K)，环境温度 293.15 K
 
-// 创建一般Robin边界条件
-auto robin_bc = std::make_unique<CauchyBC<2>>("robin_boundary", 10.0, 5.0);
-
-// 添加到物理场
-heat_physics->addBoundaryCondition(std::move(convection_bc));
-physics->addBoundaryCondition(std::move(robin_bc));
+// 将边界条件添加到问题中
+problem.addBoundaryCondition(std::move(convection_bc));
 ```
 
 ## 注意事项
@@ -89,5 +85,6 @@ physics->addBoundaryCondition(std::move(robin_bc));
 - 边界名称必须与网格中的边界标识符匹配
 - 参数值的单位取决于具体物理场类型
 - 该实现使用FEFaceValues进行边界积分计算
-- 为了提高性能，现在使用Triplet列表而不是直接操作稀疏矩阵
-- apply方法现在接受Geometry对象而不是Mesh对象
+- 使用[FEValues](../../core/classes/FEValues.md)类进行边界积分计算，采用现代C++迭代器接口
+- apply方法接受Geometry对象而不是Mesh对象
+- 使用Triplet列表而不是直接操作稀疏矩阵来提高性能

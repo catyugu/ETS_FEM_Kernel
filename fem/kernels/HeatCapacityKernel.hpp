@@ -24,15 +24,13 @@ namespace FEM {
             const MaterialProperty& rho_prop = mat_.getProperty("density");
             const MaterialProperty& cp_prop = mat_.getProperty("specific_heat");
 
-            for (size_t q = 0; q < fe_values.n_quad_points(); ++q) {
-                fe_values.reinit(q);
-
+            for (const auto& q_point : fe_values) {
                 double rho = rho_prop.evaluate();
                 double cp = cp_prop.evaluate();
 
                 // --- 一致的质量矩阵 ---
-                const auto& N = fe_values.N(); // 形函数值 (VectorXd)
-                double JxW = fe_values.JxW();
+                const auto& N = q_point.N(); // 形函数值 (VectorXd)
+                double JxW = q_point.JxW();
 
                 // 对于频域分析，需要乘以j*omega
                 TScalar factor = static_cast<TScalar>(rho * cp);
