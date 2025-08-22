@@ -22,21 +22,17 @@
 
 ```text
 === Performance Profiling Report ===
-Total elapsed time: 810.468 ms
+Total elapsed time: 5791.118 ms
 --------------------------------------------------------------------------------------------------------------
-Function/Scope                                            Calls  Total (ms)   Self (ms) Avg (ms) Min (ms) Max (ms) Pct (%)
+Function/Scope                                       Calls  Total (ms)   Self (ms) Avg (ms) Min (ms) Max (ms) Pct (%)
 --------------------------------------------------------------------------------------------------------------
-Test::PostProcessing                                          1     326.613     326.613  326.613  326.613  326.613   40.3%
-FEM::Problem<3,double>::assemble                              3     218.325     156.076   72.775    5.366  207.440   19.3%
-FEM::LinearSolver::solve                                      7     116.197     116.197   16.600    0.025  112.702   14.3%
-Test::Input                                                   1     113.156     113.156  113.156  113.156  113.156   14.0%
-FEM::FEValues::FEValues                                   47662      63.053      63.053    0.001    0.001    0.099    7.8%
-FEM::Problem<3,double>::applyDirichletBCs                     3      25.235      25.235    8.412    0.254   24.726    3.1%
-FEM::Problem<2,double>::assemble                              2       1.859       1.121    0.929    0.925    0.934    0.1%
-Test::SetupPhysics                                            1       0.877       0.877    0.877    0.877    0.877    0.1%
-FEM::Problem<1,double>::assemble                              2       0.143       0.077    0.071    0.046    0.096    0.0%
-FEM::Problem<2,double>::applyDirichletBCs                     2       0.063       0.063    0.032    0.030    0.034    0.0%
-FEM::Problem<1,double>::applyDirichletBCs                     2       0.011       0.011    0.005    0.002    0.009    0.0%
+Test::PostProcessing                                     1    3187.204    3187.204 3187.204 3187.204 3187.204   55.0%
+FEM::LinearSolver::solve                                 1    1154.626    1154.626 1154.626 1154.626 1154.626   19.9%
+FEM::Problem<3,double>::assemble                         1     868.037     628.501  868.037  868.037  868.037   10.9%
+Test::Input                                              1     412.041     412.041  412.041  412.041  412.041    7.1%
+FEM::FEValues::FEValues                             165124     239.536     239.536    0.001    0.001    1.849    4.1%
+FEM::Problem<3,double>::applyDirichletBCs                1     146.503     146.503  146.503  146.503  146.503    2.5%
+Test::SetupPhysics                                       1       2.794       2.794    2.794    2.794    2.794    0.0%
 
 ```
 
@@ -46,8 +42,8 @@ FEM::Problem<1,double>::applyDirichletBCs                     2       0.011     
 
 * **内核核心瓶颈**: `ETS_FEM_Kernel` 的核心性能瓶颈清晰地体现在**矩阵组装 (`assemble`)** 和 **线性求解 (`solve`)** 两个环节。
 * **组装 (`assemble`)**:
-    * 三维问题的组装函数 `FEM::Problem<3,double>::assemble` 是目前内核中最大的耗时点。其自身耗时 (`Self`) 为 **156.076 ms**。
-    * 在组装过程中，`FEM::FEValues` 的构造和计算是主要的开销来源。它被频繁调用（47662次），累计耗时 **63.053 ms**。
-* **求解 (`solve`)**: `FEM::LinearSolver::solve` 是第二大性能瓶颈，耗时 **116.197 ms**。这凸显了选择和优化求解器策略的重要性。
-* **边界条件**: 狄利克雷边界条件的处理 (`applyDirichletBCs`) 在三维问题中也占有一定比重，耗时 **25.235 ms**。
+    * 三维问题的组装函数 `FEM::Problem<3,double>::assemble` 是目前内核中一大耗时点。其自身耗时 (`Self`) 为 **868.037 ms**。
+    * 在组装过程中，`FEM::FEValues` 的构造和计算是主要的开销来源。它被频繁调用（165124），累计耗时 **239.536 ms**。
+* **求解 (`solve`)**: `FEM::LinearSolver::solve` 是第二大性能瓶颈，耗时 **1154.626 ms**。这凸显了选择和优化求解器策略的重要性。
+* **边界条件**: 狄利克雷边界条件的处理 (`applyDirichletBCs`) 在三维问题中也占有一定比重，耗时 **146.503 ms**。
 

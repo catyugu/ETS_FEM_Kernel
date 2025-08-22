@@ -25,6 +25,8 @@ protected:
         // 创建铜材料并设置电导率
         material = std::make_unique<Material>("Copper");
         material->setProperty("permittivity", 5.96e7); // S/m
+        ::Utils::Profiler::instance().setEnabled(true);
+        ::Utils::Profiler::instance().reset();
     }
 
     std::unique_ptr<Material> material;
@@ -74,7 +76,7 @@ TEST_F(TestElectrostatics, SolveElectrostaticsOnImportedMesh) {
             max_x = std::max(max_x, coords[0]);
         }
 
-        double tolerance = 1e-7; // 使用相对容差
+        double tolerance = 1e-8; // 使用相对容差
 
         std::cout << "X range: [" << min_x << ", " << max_x << "], tolerance: " << tolerance << std::endl;
 
