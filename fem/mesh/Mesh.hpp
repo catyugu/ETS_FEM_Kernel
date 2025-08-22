@@ -7,9 +7,10 @@
 #include <set>
 #include "Node.hpp"
 #include "Element.hpp"
-#include "Geometry.hpp"  // 添加Geometry头文件包含
+#include "Boundary.hpp"  // 添加Boundary头文件包含
 
 namespace FEM {
+    class Geometry;
 
     // Forward declarations
     class Element;
@@ -60,6 +61,7 @@ namespace FEM {
         static std::unique_ptr<Geometry> create_uniform_1d_mesh(double length, int num_elements);
         static std::unique_ptr<Geometry> create_uniform_2d_mesh(double width, double height, int nx, int ny);
         static std::unique_ptr<Geometry> create_uniform_3d_mesh(double width, double height, double depth, int nx, int ny, int nz);
+        
     private:
         std::vector<std::unique_ptr<Node>> nodes_;
         std::vector<std::unique_ptr<Element>> elements_;
@@ -68,7 +70,7 @@ namespace FEM {
         // 新增：边和面的存储
         std::vector<std::unique_ptr<Edge>> edges_;
         std::vector<std::unique_ptr<Face>> faces_;
-        
+
     };
 
 } // namespace FEM

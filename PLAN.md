@@ -13,13 +13,13 @@
 
 ### 重构方案：引入几何和边界管理层
 
-我建议引入两个新的类 `BoundaryDefinition` 和 `Geometry`，来解耦和简化当前的设计。
+我建议引入两个新的类 `Boundary` 和 `Geometry`，来解耦和简化当前的设计。
 
-#### 第1步：创建 `BoundaryDefinition` 类
+#### 第1步：创建 `Boundary` 类
 
 创建一个专门的类来定义一个命名的边界。这个类将包含边界的名称以及构成该边界的低维单元（例如，对于3D六面体单元的边界，其边界单元是2D的四边形单元）。
 
-**`fem/mesh/BoundaryDefinition.hpp` (新文件)**
+**`fem/mesh/Boundary.hpp` (新文件)**
 
 ```cpp
 #pragma once
@@ -31,9 +31,9 @@
 #include <set>
 
 namespace FEM {
-    class BoundaryDefinition {
+    class Boundary {
     public:
-        BoundaryDefinition(const std::string& name) : name_(name) {}
+        Boundary(const std::string& name) : name_(name) {}
 
         void addElement(std::unique_ptr<Element> element) {
             elements_.push_back(std::move(element));
@@ -62,7 +62,7 @@ namespace FEM {
 
 #### 第2步：创建 `Geometry` 类
 
-这个类将作为顶层容器，持有核心的 `Mesh` 对象以及所有 `BoundaryDefinition` 对象。系统的其他部分（如 `Problem`）将主要与 `Geometry` 类交互，而不是直接操作 `Mesh` 的边界。
+这个类将作为顶层容器，持有核心的 `Mesh` 对象以及所有 `Boundary` 对象。系统的其他部分（如 `Problem`）将主要与 `Geometry` 类交互，而不是直接操作 `Mesh` 的边界。
 
 **`fem/mesh/Geometry.hpp` (新文件)**
 
@@ -70,7 +70,7 @@ namespace FEM {
 #pragma once
 
 #include "Mesh.hpp"
-#include "BoundaryDefinition.hpp"
+#include "Boundary.hpp"
 #include <map>
 #include <string>
 #include <memory>
@@ -83,11 +83,11 @@ namespace FEM {
         Mesh& getMesh() { return *mesh_; }
         const Mesh& getMesh() const { return *mesh_; }
 
-        void addBoundary(std::unique_ptr<BoundaryDefinition> boundary) {
+        void addBoundary(std::unique_ptr<Boundary> boundary) {
             boundaries_[boundary->getName()] = std::move(boundary);
         }
 
-        const BoundaryDefinition& getBoundary(const std::string& name) const {
+        const Boundary& getBoundary(const std::string& name) const {
             auto it = boundaries_.find(name);
             if (it == boundaries_.end()) {
                 throw std::runtime_error("Boundary with name '" + name + "' not found.");
@@ -97,7 +97,7 @@ namespace FEM {
 
     private:
         std::unique_ptr<Mesh> mesh_;
-        std::map<std::string, std::unique_ptr<BoundaryDefinition>> boundaries_;
+        std::map<std::string, std::unique_ptr<Boundary>> boundaries_;
     };
 }
 ```
@@ -144,7 +144,7 @@ private:
 // ...
 ```
 
-同时，修改 `Mesh.cpp` 中的静态工厂方法。它们现在将创建 `Mesh` 和 `BoundaryDefinition`，并将它们组装到一个 `Geometry` 对象中返回。
+同时，修改 `Mesh.cpp` 中的静态工厂方法。它们现在将创建 `Mesh` 和 `Boundary`，并将它们组装到一个 `Geometry` 对象中返回。
 
 **`fem/mesh/Mesh.cpp` (修改示例)**
 
@@ -156,14 +156,14 @@ std::unique_ptr<Geometry> Mesh::create_uniform_1d_mesh(double length, int num_el
     auto geometry = std::make_unique<Geometry>(std::move(mesh));
 
     // 添加边界定义
-    auto left_bnd = std::make_unique<BoundaryDefinition>("left");
+    auto left_bnd = std::make_unique<Boundary>("left");
     auto left_node = geometry->getMesh().getNodeById(0);
     if (left_node) {
         left_bnd->addElement(std::make_unique<PointElement>(0, std::vector<Node*>{left_node}));
     }
     geometry->addBoundary(std::move(left_bnd));
 
-    auto right_bnd = std::make_unique<BoundaryDefinition>("right");
+    auto right_bnd = std::make_unique<Boundary>("right");
     auto right_node = geometry->getMesh().getNodeById(num_elements);
     if (right_node) {
         right_bnd->addElement(std::make_unique<PointElement>(1, std::vector<Node*>{right_node}));
@@ -236,9 +236,9 @@ void apply(const Geometry& geometry, const DofManager& dof_manager,
 
 ### 重构的优势
 
-* **结构清晰**：`Mesh` 只负责几何拓扑，`BoundaryDefinition` 负责边界的语义，`Geometry` 负责整合，职责划分清晰。
+* **结构清晰**：`Mesh` 只负责几何拓扑，`Boundary` 负责边界的语义，`Geometry` 负责整合，职责划分清晰。
 * **降低耦合**：`Problem` 和 `BC` 类不再依赖于 `Mesh` 的内部实现来获取边界，而是通过 `Geometry` 提供的稳定接口。
-* **易于扩展**：未来当您需要从外部文件导入网格时，只需编写一个解析器，它能生成 `Mesh` 和一组 `BoundaryDefinition`，然后将它们组装成 `Geometry` 对象即可。整个求解流程无需改动。
+* **易于扩展**：未来当您需要从外部文件导入网格时，只需编写一个解析器，它能生成 `Mesh` 和一组 `Boundary`，然后将它们组装成 `Geometry` 对象即可。整个求解流程无需改动。
 * **代码更直观**：`geometry->getBoundary("left")` 远比 `mesh->getBoundaryElements("left")` 的意图更清晰。
 
 这个重构方案能够在不改变核心算法逻辑的前提下，显著改善您项目的代码结构和可维护性，为未来支持更复杂的问题（如多材料、耦合场）打下坚实的基础。希望这个方案对您有帮助！

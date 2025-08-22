@@ -134,7 +134,7 @@ ETS_FEM_Kernel 是一个有限元方法（FEM）计算内核的 C++ 实现，用
   - [Face](fem/mesh/classes/Mesh.md#Face) - 网格面结构
   - [Mesh](fem/mesh/classes/Mesh.md) - 网格类
   - [Geometry](fem/mesh/classes/Geometry.md) - 几何类
-  - [BoundaryDefinition](fem/mesh/classes/BoundaryDefinition.md) - 边界定义类
+  - [Boundary](fem/mesh/classes/Boundary.md) - 边界定义类
   - [Node](fem/mesh/classes/Node.md) - 节点类
   - [Element](fem/mesh/classes/Element.md) - 单元类
 

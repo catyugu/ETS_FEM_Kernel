@@ -12,7 +12,7 @@
 #include "kernels/HeatDiffusionKernel.hpp"
 #include "io/Importer.hpp"
 #include "bcs/DirichletBC.hpp"
-#include "mesh/BoundaryDefinition.hpp"
+#include "mesh/Boundary.hpp"
 #include "test_utils.hpp"
 
 using namespace FEM;
@@ -102,7 +102,7 @@ TEST_F(TestElectrostatics, SolveElectrostaticsOnImportedMesh) {
         auto geometry = std::make_unique<Geometry>(std::move(mesh));
         
         // 添加边界定义到几何对象
-        auto left_bnd = std::make_unique<BoundaryDefinition>("left_boundary");
+        auto left_bnd = std::make_unique<Boundary>("left_boundary");
         for (int node_id : left_boundary_nodes) {
             auto node = geometry->getMesh().getNodeById(node_id);
             if (node) {
@@ -111,7 +111,7 @@ TEST_F(TestElectrostatics, SolveElectrostaticsOnImportedMesh) {
         }
         geometry->addBoundary(std::move(left_bnd));
         
-        auto right_bnd = std::make_unique<BoundaryDefinition>("right_boundary");
+        auto right_bnd = std::make_unique<Boundary>("right_boundary");
         for (int node_id : right_boundary_nodes) {
             auto node = geometry->getMesh().getNodeById(node_id);
             if (node) {

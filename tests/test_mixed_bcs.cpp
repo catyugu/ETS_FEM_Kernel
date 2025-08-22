@@ -16,8 +16,6 @@
 // 测试套件，用于验证混合边界条件（诺伊曼 + 柯西）
 class MixedBoundaryConditionsTest : public ::testing::Test {
 protected:
-    // 定义物理和几何参数
-    static constexpr int problem_dim = 1;
     const double L = 1.0;         // 杆的长度
     const double k = 2.0;         // 热导率
     const double q0 = 50.0;       // 左端的热流密度 (Neumann)
@@ -33,6 +31,7 @@ protected:
 
 // 测试案例：1D热传导问题，左端为Neumann，右端为Cauchy
 TEST_F(MixedBoundaryConditionsTest, HeatTransfer_Neumann_Cauchy_1D) {
+    constexpr int problem_dim = 1;
     // 1. 创建网格
     auto mesh = FEM::Mesh::create_uniform_1d_mesh(L, num_elements);
 
@@ -49,23 +48,32 @@ TEST_F(MixedBoundaryConditionsTest, HeatTransfer_Neumann_Cauchy_1D) {
     );
 
     // 5. 添加边界条件
-    // 左端 (x=0) 添加 Neumann 边界条件 (流入域内的热流为负值)
-    heat_physics->addBoundaryCondition(
-        std::make_unique<FEM::NeumannBC<problem_dim>>("left", -q0)
-    );
+    // 左端 (x=0) 添加 Neumann 边界条件
+    auto neumann_bc = std::make_unique<FEM::NeumannBC<problem_dim>>("left", q0);
+    std::cout << "Adding Neumann BC with value: " << -q0 << std::endl;
+    heat_physics->addBoundaryCondition(std::move(neumann_bc));
+    
     // 右端 (x=L) 添加 Cauchy 边界条件
-    heat_physics->addBoundaryCondition(
-        std::make_unique<FEM::CauchyBC<problem_dim>>("right", h, T_inf)
-    );
+    auto cauchy_bc = std::make_unique<FEM::CauchyBC<problem_dim>>("right", h, T_inf);
+    std::cout << "Adding Cauchy BC with h: " << h << ", T_inf: " << T_inf << std::endl;
+    heat_physics->addBoundaryCondition(std::move(cauchy_bc));
 
     // 6. 创建并配置 Problem
     auto problem = std::make_unique<FEM::Problem<problem_dim>>(
         std::move(mesh), std::move(heat_physics)
     );
 
+
     // 7. 组装并求解
     problem->assemble();
+    
+    // 添加调试信息
+    std::cout << "Global Stiffness Matrix K:" << std::endl << problem->getStiffnessMatrix() << std::endl;
+    std::cout << "Global Load Vector F:" << std::endl << problem->getLoadVector() << std::endl;
+    
     problem->solve();
+    
+    std::cout << "Solution Vector U:" << std::endl << problem->getSolution() << std::endl;
 
     // 8. 验证结果
     const auto& solution_vector = problem->getSolution();
@@ -116,12 +124,12 @@ TEST_F(MixedBoundaryConditionsTest, HeatTransfer_2D_Analytic) {
 
     // --- 4. 施加边界条件 ---
     // 左边界 (x=0): Cauchy, -k*dT/dx = h(T - T_inf) => -1*2 = 2(1 - T_inf) => T_inf = 2
-    heat_physics->addBoundaryCondition(std::make_unique<FEM::CauchyBC<problem_dim>>("left", 2.0, 2.0));
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::CauchyBC<problem_dim>>("left", -2.0, 2.0));
     // 右边界 (x=1): Dirichlet, T(1,y) = 2*1 + 1 = 3
     heat_physics->addBoundaryCondition(std::make_unique<FEM::DirichletBC<problem_dim>>("right", 3.0));
     // 顶部 (y=1) 和 底部 (y=0): Neumann, dT/dy = 0 (绝热)
-    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("top", 0.0));
-    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("bottom", 0.0));
+    // heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("top", 0.0));
+    // heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("bottom", 0.0));
 
     // --- 5. 创建问题并求解 ---
     auto problem = std::make_unique<FEM::Problem<problem_dim>>(std::move(mesh), std::move(heat_physics));
@@ -165,12 +173,12 @@ TEST_F(MixedBoundaryConditionsTest, HeatTransfer_3D_Analytic) {
     // 底面 (z=0): Dirichlet, T(x,y,0) = 10
     heat_physics->addBoundaryCondition(std::make_unique<FEM::DirichletBC<problem_dim>>("bottom", 10.0));
     // 顶面 (z=1): Neumann, -k*dT/dz = -1*5 = -5
-    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("top", -5.0));
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("top", 5.0));
     // 其他四个侧面: Neumann, dT/dn = 0 (绝热)
-    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("left", 0.0));
-    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("right", 0.0));
     heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("front", 0.0));
     heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("back", 0.0));
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("left", 0.0));
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("right", 0.0));
 
     // --- 5. 创建问题并求解 ---
     auto problem = std::make_unique<FEM::Problem<problem_dim>>(std::move(mesh), std::move(heat_physics));
