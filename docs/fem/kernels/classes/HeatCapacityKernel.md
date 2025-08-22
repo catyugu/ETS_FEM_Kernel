@@ -36,7 +36,7 @@ class HeatCapacityKernel : public Kernel<TDim, TNumNodes_, TScalar>
 - `element` - 要计算单元矩阵的单元对象
 
 **返回值:**
-- 热容问题的单元质量矩阵，大小为 [TNumNodes_](file:///E:/code/cpp/ETS_FEM_Kernel/fem/kernels/HeatCapacityKernel.hpp#L9) x [TNumNodes_](file:///E:/code/cpp/ETS_FEM_Kernel/fem/kernels/HeatCapacityKernel.hpp#L9)
+- 热容问题的单元质量矩阵，大小为 `TNumNodes_` x `TNumNodes_`
 
 ## 实现细节
 

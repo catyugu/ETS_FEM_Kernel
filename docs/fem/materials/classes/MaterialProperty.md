@@ -62,7 +62,7 @@ double k_T = function_prop.evaluate(vars); // 根据温度计算热导率
 
 ## 实现细节
 
-`MaterialProperty` 类使用一个布尔标志 [is_constant_](file:///E:/code/cpp/ETS_FEM_Kernel/fem/materials/MaterialProperty.hpp#L28) 来区分常数属性和函数属性。对于常数属性，直接返回存储的值；对于函数属性，调用存储的函数对象进行计算。
+`MaterialProperty` 类使用一个布尔标志`is_constant`来区分常数属性和函数属性。对于常数属性，直接返回存储的值；对于函数属性，调用存储的函数对象进行计算。
 
 该设计允许材料属性在运行时根据环境条件（如温度、压力等）动态变化，提供了灵活性和扩展性。
 

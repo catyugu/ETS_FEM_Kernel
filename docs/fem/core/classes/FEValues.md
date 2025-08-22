@@ -96,7 +96,7 @@ for (size_t q = 0; q < fe_values.n_quad_points(); ++q) {
 - 雅可比矩阵及其行列式
 - 形状函数在实际坐标下的梯度
 
-与之前的实现相比，现在通过 [ReferenceElement](ReferenceElement.md) 类获取形函数和积分点信息。这种设计利用了缓存机制，避免了重复计算，提高了性能。此外，B矩阵的构建已从该类中移出，由各个物理Kernel负责构建。这样使得 [FEValues](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/FEValues.hpp#L12-L72) 类更加通用，可以适用于不同类型的物理问题，而不仅仅是标量扩散问题。
+与之前的实现相比，现在通过 [ReferenceElement](ReferenceElement.md) 类获取形函数和积分点信息。这种设计利用了缓存机制，避免了重复计算，提高了性能。此外，B矩阵的构建已从该类中移出，由各个物理Kernel负责构建。这样使得 `FEValues` 类更加通用，可以适用于不同类型的物理问题，而不仅仅是标量扩散问题。
 
 ## 依赖关系
 
