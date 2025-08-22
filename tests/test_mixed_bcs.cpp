@@ -94,3 +94,100 @@ TEST_F(MixedBoundaryConditionsTest, HeatTransfer_Neumann_Cauchy_1D) {
         EXPECT_NEAR(numerical_temp, analytical_temp, 1e-5);
     }
 }
+TEST_F(MixedBoundaryConditionsTest, HeatTransfer_2D_Analytic) {
+    // --- 1. 问题定义 ---
+    constexpr int problem_dim = 2;
+    const double k = 1.0; // 热导率
+
+    // 解析解: T(x, y) = 2x + 1
+    auto analytical_solution = [](double x, double) {
+        return 2.0 * x + 1.0;
+    };
+
+    // --- 2. 创建网格 ---
+    auto mesh = FEM::Mesh::create_uniform_2d_mesh(1.0, 1.0, 10, 10);
+
+    // --- 3. 定义材料和物理场 ---
+    FEM::Material material("TestMat");
+    material.setProperty("thermal_conductivity", k);
+    auto heat_physics = std::make_unique<FEM::HeatTransfer<problem_dim>>();
+    heat_physics->addKernel(std::make_unique<FEM::HeatDiffusionKernel<problem_dim>>(material));
+
+    // --- 4. 施加边界条件 ---
+    // 左边界 (x=0): Cauchy, -k*dT/dx = h(T - T_inf) => -1*2 = 2(1 - T_inf) => T_inf = 2
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::CauchyBC<problem_dim>>("left", 2.0, 2.0));
+    // 右边界 (x=1): Dirichlet, T(1,y) = 2*1 + 1 = 3
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::DirichletBC<problem_dim>>("right", 3.0));
+    // 顶部 (y=1) 和 底部 (y=0): Neumann, dT/dy = 0 (绝热)
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("top", 0.0));
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("bottom", 0.0));
+
+    // --- 5. 创建问题并求解 ---
+    auto problem = std::make_unique<FEM::Problem<problem_dim>>(std::move(mesh), std::move(heat_physics));
+    problem->assemble();
+    problem->solve();
+
+    // --- 6. 验证结果 ---
+    const auto& solution_vector = problem->getSolution();
+    const auto& fem_mesh = problem->getMesh();
+    const auto& dof_manager = problem->getDofManager();
+
+    for (const auto& node : fem_mesh.getNodes()) {
+        const double node_x = node->getX();
+        const double node_y = node->getY();
+        const int dof_index = dof_manager.getNodeDof(node->getId(), 0);
+        const double numerical_temp = solution_vector(dof_index);
+        const double analytical_temp = analytical_solution(node_x, node_y);
+        ASSERT_NEAR(numerical_temp, analytical_temp, 1e-5);
+    }
+}
+TEST_F(MixedBoundaryConditionsTest, HeatTransfer_3D_Analytic) {
+    // --- 1. 问题定义 ---
+    constexpr int problem_dim = 3;
+    const double k = 1.0; // 热导率
+
+    // 解析解: T(x, y, z) = 5z + 10
+    auto analytical_solution = [](double, double, double z) {
+        return 5.0 * z + 10.0;
+    };
+
+    // --- 2. 创建网格 ---
+    auto mesh = FEM::Mesh::create_uniform_3d_mesh(1.0, 1.0, 1.0, 5, 5, 5);
+
+    // --- 3. 定义材料和物理场 ---
+    FEM::Material material("TestMat");
+    material.setProperty("thermal_conductivity", k);
+    auto heat_physics = std::make_unique<FEM::HeatTransfer<problem_dim>>();
+    heat_physics->addKernel(std::make_unique<FEM::HeatDiffusionKernel<problem_dim>>(material));
+
+    // --- 4. 施加边界条件 ---
+    // 底面 (z=0): Dirichlet, T(x,y,0) = 10
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::DirichletBC<problem_dim>>("bottom", 10.0));
+    // 顶面 (z=1): Neumann, -k*dT/dz = -1*5 = -5
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("top", -5.0));
+    // 其他四个侧面: Neumann, dT/dn = 0 (绝热)
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("left", 0.0));
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("right", 0.0));
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("front", 0.0));
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("back", 0.0));
+
+    // --- 5. 创建问题并求解 ---
+    auto problem = std::make_unique<FEM::Problem<problem_dim>>(std::move(mesh), std::move(heat_physics));
+    problem->assemble();
+    problem->solve();
+
+    // --- 6. 验证结果 ---
+    const auto& solution_vector = problem->getSolution();
+    const auto& fem_mesh = problem->getMesh();
+    const auto& dof_manager = problem->getDofManager();
+
+    for (const auto& node : fem_mesh.getNodes()) {
+        const double node_x = node->getX();
+        const double node_y = node->getY();
+        const double node_z = node->getZ();
+        const int dof_index = dof_manager.getNodeDof(node->getId(), 0);
+        const double numerical_temp = solution_vector(dof_index);
+        const double analytical_temp = analytical_solution(node_x, node_y, node_z);
+        ASSERT_NEAR(numerical_temp, analytical_temp, 1e-5);
+    }
+}
