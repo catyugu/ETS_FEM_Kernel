@@ -37,7 +37,7 @@ CauchyBC(const std::string& boundary_name, TScalar h_val, TScalar T_inf_val)
 
 ```cpp
 void apply(const Mesh& mesh, const DofManager& dof_manager,
-           Eigen::SparseMatrix<TScalar>& K_global, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const override;
+           std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const override;
 ```
 
 ### getH
@@ -89,3 +89,4 @@ physics->addBoundaryCondition(std::move(robin_bc));
 - 边界名称必须与网格中的边界标识符匹配
 - 参数值的单位取决于具体物理场类型
 - 该实现使用FEFaceValues进行边界积分计算
+- 为了提高性能，现在使用Triplet列表而不是直接操作稀疏矩阵

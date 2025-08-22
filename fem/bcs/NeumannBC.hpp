@@ -12,7 +12,7 @@ namespace FEM {
             : BoundaryCondition<TDim, TScalar>(boundary_name), value_(value) {}
 
         void apply(const Mesh& mesh, const DofManager& dof_manager,
-                   Eigen::SparseMatrix<TScalar>& K_global, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const override {
+                   std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const override {
             
             const auto& boundary_elements = mesh.getBoundaryElements(this->boundary_name_);
 

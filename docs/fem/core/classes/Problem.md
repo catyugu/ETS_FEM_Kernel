@@ -4,7 +4,7 @@
 
 `Problem` 类是有限元问题的主控制器类，负责协调整个求解过程。它管理网格、物理场、自由度、全局矩阵和向量，并提供组装、施加边界条件、求解和输出结果的接口。这是一个模板类，模板参数表示问题的维度。
 
-与之前版本相比，该类现在支持多物理场耦合，可以同时处理多个物理场问题。
+与之前版本相比，该类现在支持多物理场耦合，可以同时处理多个物理场问题。此外，我们对矩阵组装过程进行了性能优化，使用Triplet列表来提高组装效率。
 
 ## 类定义
 
@@ -49,7 +49,7 @@ class Problem
 
 ### void assemble()
 
-组装全局刚度矩阵和载荷向量。该方法现在支持稀疏模式预计算，以提高矩阵组装的性能。
+组装全局刚度矩阵和载荷向量。该方法现在使用Triplet列表来提高组装效率，避免了直接操作稀疏矩阵导致的性能问题。
 
 对于多物理场问题，该方法会依次组装每个物理场的贡献。
 
@@ -123,4 +123,3 @@ std::vector<std::unique_ptr<FEM::PhysicsField<2>>> physics_fields;
 physics_fields.push_back(std::make_unique<FEM::HeatTransfer<2>>());
 physics_fields.push_back(std::make_unique<FEM::Electrostatics<2>>());
 auto multiphysics_problem = std::make_unique<FEM::Problem<2>>(std::move(mesh), std::move(physics_fields));
-```

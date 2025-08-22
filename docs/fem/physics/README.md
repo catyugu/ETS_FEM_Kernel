@@ -1,49 +1,31 @@
-# fem::physics 命名空间
+# FEM 物理场模块 (fem/physics)
 
 ## 概述
 
-`fem::physics` 命名空间包含各种物理场问题的实现。这些类负责管理特定物理问题的内核并执行全局矩阵组装。
+物理场模块定义了各种物理问题的抽象接口和具体实现。通过继承PhysicsField抽象类，可以实现各种具体的物理场问题，如热传导、静电场等。
 
-与之前版本相比，该命名空间中的类现在实现了单元类型过滤机制，确保只有适当类型的单元参与域内组装。
+## 主要类
 
-## 类列表
+- [PhysicsField](classes/PhysicsField.md) - 物理场抽象基类
+- HeatTransfer - 热传导物理场
+- Electrostatics - 静电场物理场
 
-### [PhysicsField](classes/PhysicsField.md)
+## 性能优化
 
-所有物理场问题的抽象基类。定义了物理场问题必须实现的接口，包括组装全局矩阵和向量、应用边界条件等方法。
+最近，我们对物理场模块进行了性能优化。PhysicsField类的assemble_volume和applyNaturalBCs方法现在使用Triplet列表而不是直接操作稀疏矩阵，以提高组装效率。这种优化避免了在组装过程中频繁访问和修改稀疏矩阵，从而显著提高了性能。
 
-### [HeatTransfer](classes/HeatTransfer.md)
+## 使用方法
 
-热传导物理问题的实现。负责管理热传导分析的内核并执行全局矩阵组装。与之前版本相比，该类现在实现了单元类型过滤机制，确保只有适当类型的单元参与域内组装。
+物理场模块通过Problem类使用：
 
-### [Electrostatics](classes/Electrostatics.md)
+```cpp
+auto physics = std::make_unique<FEM::HeatTransfer<2>>();
+physics->addKernel(std::make_unique<FEM::HeatDiffusionKernel<2>>(*material));
+auto problem = std::make_unique<FEM::Problem<2>>(std::move(mesh), std::move(physics));
+```
 
-静电场物理问题的实现。用于计算在给定边界条件下的电势分布。与之前版本相比，该类现在实现了单元类型过滤机制，确保只有适当类型的单元参与域内组装。
+## 注意事项
 
-## 设计模式
-
-该命名空间使用了以下设计模式：
-
-1. **模板方法模式**: [PhysicsField](classes/PhysicsField.md) 基类定义了物理场问题的接口，具体实现由派生类完成。
-2. **策略模式**: 通过内核机制，可以在运行时选择不同的内核实现。
-3. **抽象工厂模式**: 通过 [addKernel](classes/HeatTransfer.md) 方法，可以创建和管理不同类型的内核。
-
-## 依赖关系
-
-- [fem::kernels](../kernels/README.md) - 物理内核
-- [fem::mesh](../mesh/README.md) - 网格数据结构
-- [fem::core](../core/README.md) - 核心有限元计算组件
-- [fem::bcs](../bcs/README.md) - 边界条件
-- Eigen - 矩阵运算库
-
-## 更新说明
-
-与之前版本相比，该命名空间的主要变化包括：
-
-1. 实现了单元类型过滤机制，确保只有适当类型的单元参与域内组装
-2. 添加了 [shouldAssembleElement](classes/HeatTransfer.md) 方法，用于判断单元是否应该参与组装
-3. 移除了硬编码的节点数
-4. 可以处理混合网格，即同时包含不同类型和节点数的单元
-5. 根据问题维度自动过滤参与组装的单元类型
-
-这些改进使得物理场可以处理混合网格，即同时包含不同类型和节点数的单元，并确保只有适当类型的单元参与计算，提高了代码的通用性和可扩展性。
+1. 所有具体的物理场类都必须继承自PhysicsField并实现所有纯虚函数
+2. 为了提高性能，现在使用Triplet列表而不是直接操作稀疏矩阵
+3. 支持多物理场耦合

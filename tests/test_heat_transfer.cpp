@@ -158,7 +158,6 @@ TEST_F(TestHeatTransfer, SolveHeatTransferOnImportedMesh) {
 
         // 为每个参考节点找到对应的计算节点并比较结果
         for (size_t i = 0; i < reference_nodes.size(); ++i) {
-            PROFILE_SCOPE("FindClosestNode");
             const auto& ref_coords = reference_nodes[i]->getCoords();
             // 在计算网格中找到最接近的节点
             int matched_index = findClosestNode(problem_nodes, ref_coords);

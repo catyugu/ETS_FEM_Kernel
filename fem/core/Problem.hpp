@@ -34,13 +34,22 @@ namespace FEM {
 
         void assemble() {
             PROFILE_FUNCTION();
+
+            // 创建一个 Triplet 列表来存储非零元
+            std::vector<Eigen::Triplet<TScalar>> triplet_list;
+
+            // 预估非零元数量并为其预留空间，以避免多次内存重分配
             auto sparsity_pattern = dof_manager_->computeSparsityPattern(*mesh_);
-            K_global_.reserve(sparsity_pattern.size());
+            triplet_list.reserve(sparsity_pattern.size());
 
             for (const auto& physics : physics_fields_) {
-                physics->assemble_volume(*mesh_, *dof_manager_, K_global_, F_global_);
-                physics->applyNaturalBCs(*mesh_, *dof_manager_, K_global_, F_global_);
+                // 将 triplet_list 传递给物理场进行填充，而不是 K_global_
+                physics->assemble_volume(*mesh_, *dof_manager_, triplet_list, F_global_);
+                physics->applyNaturalBCs(*mesh_, *dof_manager_, triplet_list, F_global_);
             }
+
+            // 在所有单元和边界计算完成后，一次性高效构建稀疏矩阵
+            K_global_.setFromTriplets(triplet_list.begin(), triplet_list.end());
         }
 
         void solve() {

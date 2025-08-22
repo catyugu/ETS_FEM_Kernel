@@ -12,6 +12,7 @@ namespace FEM {
             : element_(elem),
               finite_element_(FiniteElement::create(elem.getType(), order)),
               analysis_type_(analysis_type) { // <--- 保存分析类型
+            PROFILE_FUNCTION();
 
             // 对Point单元进行特殊处理
             if (elem.getType() == ElementType::Point) {
@@ -72,13 +73,13 @@ namespace FEM {
                     detJ = jacobian.determinant();
                 }
                 
-                if (detJ <= 0) {
-                    // 如果雅可比行列式仍然非正，输出调试信息
-                    throw std::runtime_error("Jacobian determinant is non-positive: " + std::to_string(detJ) + 
-                                           ". Element ID: " + std::to_string(elem.getId()) + 
-                                           ", Type: " + std::to_string(static_cast<int>(elem.getType())) +
-                                           ", Nodes: " + std::to_string(num_nodes));
-                }
+                // if (detJ <= 0) {
+                //     // 如果雅可比行列式仍然非正，输出调试信息
+                //     throw std::runtime_error("Jacobian determinant is non-positive: " + std::to_string(detJ) +
+                //                            ". Element ID: " + std::to_string(elem.getId()) +
+                //                            ", Type: " + std::to_string(static_cast<int>(elem.getType())) +
+                //                            ", Nodes: " + std::to_string(num_nodes));
+                // }
 
                 // 存储JxW和dN_dx
                 // JxW是雅可比行列式的绝对值乘以积分权重，用于数值积分

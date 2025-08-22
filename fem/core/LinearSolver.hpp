@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include "utils/SimpleLogger.hpp"
 #include <complex>
+#include <utils/Profiler.hpp>
 
 namespace FEM {
 
@@ -30,6 +31,7 @@ namespace FEM {
          */
         template<typename TScalar>
         Eigen::Matrix<TScalar, Eigen::Dynamic, 1> solve(const Eigen::SparseMatrix<TScalar>& A, const Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& b) const {
+            PROFILE_FUNCTION();
             switch (type_) {
                 case SolverType::SparseLU:
                     return solveWithSparseLU(A, b);

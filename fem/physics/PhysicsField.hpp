@@ -36,18 +36,18 @@ namespace FEM {
          * @brief 组装全局刚度矩阵和载荷向量（体积项）
          * @param mesh 网格对象
          * @param dof_manager 自由度管理器
-         * @param K_global 全局刚度矩阵
+         * @param triplet_list 全局刚度矩阵的Triplet列表
          * @param F_global 全局载荷向量
          */
         virtual void assemble_volume(const Mesh& mesh, const DofManager& dof_manager,
-                              Eigen::SparseMatrix<TScalar>& K_global, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) {
+                              std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) {
             // 只对适当的单元类型进行组装
             for (const auto& elem : mesh.getElements()) {
                 // 根据问题维度过滤单元类型
                 bool should_assemble = shouldAssembleElement(*elem, TDim);
                 if (should_assemble) {
                     for (const auto& kernel_wrapper : kernels_) {
-                        kernel_wrapper->assemble_element(*elem, K_global, dof_manager);
+                        kernel_wrapper->assemble_element(*elem, triplet_list, dof_manager);
                     }
                 }
             }
@@ -90,14 +90,14 @@ namespace FEM {
          * @brief 应用"自然"边界条件 (Neumann, Cauchy)
          * @param mesh 网格对象
          * @param dof_manager 自由度管理器
-         * @param K_global 全局刚度矩阵
+         * @param triplet_list 全局刚度矩阵的Triplet列表
          * @param F_global 全局载荷向量
          */
         void applyNaturalBCs(const Mesh& mesh, const DofManager& dof_manager,
-                             Eigen::SparseMatrix<TScalar>& K_global, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const {
+                             std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const {
             for (const auto& bc : boundary_conditions_) {
                 if (bc->getType() != BCType::Dirichlet) {
-                    bc->apply(mesh, dof_manager, K_global, F_global);
+                    bc->apply(mesh, dof_manager, triplet_list, F_global);
                 }
             }
         }

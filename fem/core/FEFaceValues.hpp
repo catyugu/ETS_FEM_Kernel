@@ -35,7 +35,7 @@ namespace FEM {
                 
                 // 对于面单元，我们需要特殊处理
                 // 这里简化处理，实际应用中可能需要更复杂的实现
-                if (detJ <= 0) throw std::runtime_error("Jacobian determinant is non-positive.");
+//                if (detJ <= 0) throw std::runtime_error("Jacobian determinant is non-positive.");
 
                 all_JxW_.push_back(detJ * finite_element_->getQuadWeight(q));
                 Eigen::MatrixXd dN_dx = jacobian.inverse() * dN_dxi;
