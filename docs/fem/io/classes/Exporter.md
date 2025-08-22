@@ -46,7 +46,7 @@ try {
 
 ## 实现细节
 
-`Exporter` 类提供了一个模板函数 [write_vtk](file:///E:/code/cpp/ETS_FEM_Kernel/fem/io/Exporter.cpp#L15-L66)，用于将 [Problem](../../core/classes/Problem.md) 对象中的结果数据导出为 VTK 格式的文件。VTK（Visualization Toolkit）格式是一种广泛支持的科学数据格式，可以被多种可视化软件（如 ParaView）读取。
+`Exporter` 类提供了一个模板函数 `write_vtk`，用于将 [Problem](../../core/classes/Problem.md) 对象中的结果数据导出为 VTK 格式的文件。VTK（Visualization Toolkit）格式是一种广泛支持的科学数据格式，可以被多种可视化软件（如 ParaView）读取。
 
 导出的数据包括：
 1. 网格节点坐标

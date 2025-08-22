@@ -9,6 +9,7 @@
 #include "fem/kernels/HeatDiffusionKernel.hpp"
 #include "fem/bcs/NeumannBC.hpp"
 #include "fem/bcs/CauchyBC.hpp"
+#include "fem/bcs/DirichletBC.hpp"
 #include "fem/mesh/Mesh.hpp"
 #include "fem/core/DofManager.hpp"
 
@@ -48,9 +49,9 @@ TEST_F(MixedBoundaryConditionsTest, HeatTransfer_Neumann_Cauchy_1D) {
     );
 
     // 5. 添加边界条件
-    // 左端 (x=0) 添加 Neumann 边界条件
+    // 左端 (x=0) 添加 Neumann 边界条件 (流入域内的热流为负值)
     heat_physics->addBoundaryCondition(
-        std::make_unique<FEM::NeumannBC<problem_dim>>("left", q0)
+        std::make_unique<FEM::NeumannBC<problem_dim>>("left", -q0)
     );
     // 右端 (x=L) 添加 Cauchy 边界条件
     heat_physics->addBoundaryCondition(
@@ -138,7 +139,7 @@ TEST_F(MixedBoundaryConditionsTest, HeatTransfer_2D_Analytic) {
         const int dof_index = dof_manager.getNodeDof(node->getId(), 0);
         const double numerical_temp = solution_vector(dof_index);
         const double analytical_temp = analytical_solution(node_x, node_y);
-        ASSERT_NEAR(numerical_temp, analytical_temp, 1e-5);
+        EXPECT_NEAR(numerical_temp, analytical_temp, 1e-5);
     }
 }
 TEST_F(MixedBoundaryConditionsTest, HeatTransfer_3D_Analytic) {
@@ -188,6 +189,6 @@ TEST_F(MixedBoundaryConditionsTest, HeatTransfer_3D_Analytic) {
         const int dof_index = dof_manager.getNodeDof(node->getId(), 0);
         const double numerical_temp = solution_vector(dof_index);
         const double analytical_temp = analytical_solution(node_x, node_y, node_z);
-        ASSERT_NEAR(numerical_temp, analytical_temp, 1e-5);
+        EXPECT_NEAR(numerical_temp, analytical_temp, 1e-5);
     }
 }

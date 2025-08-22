@@ -19,7 +19,7 @@ class InterpolationUtilities
 **参数:**
 - `element` - 当前单元的常量引用
 - `shape_values` - 当前积分点上的形函数值向量(N)
-- `problem` - [Problem](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/Problem.hpp#L25-L86)实例，用于访问所有物理场和解（目前简化为1D情况）
+- `problem` - `Problem`实例，用于访问所有物理场和解（目前简化为1D情况）
 
 **返回值:**
 - 一个从变量名到插值结果的映射
@@ -54,7 +54,7 @@ interpolated_value = Σ(N_i * u_i)
 
 ## 依赖关系
 
-- [Element](file:///E:/code/cpp/ETS_FEM_Kernel/fem/mesh/Element.hpp#L28-L77) - 单元类
-- [Problem](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/Problem.hpp#L25-L86) - 问题类
+- [Element](../../fem/mesh/classes/Element.md) - 单元类
+- [Problem](../../fem/core/classes/Problem.md) - 问题类
 - Eigen - 向量运算库
 - STL - 映射、字符串、向量等标准库组件

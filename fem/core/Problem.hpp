@@ -50,10 +50,10 @@ namespace FEM {
 
             // 在所有单元和边界计算完成后，一次性高效构建稀疏矩阵
             K_global_.setFromTriplets(triplet_list.begin(), triplet_list.end());
+            applyDirichletBCs();
         }
 
         void solve() {
-            applyDirichletBCs();
             LinearSolver solver(solver_type_);
             U_solution_ = solver.solve(K_global_, F_global_);
         }
@@ -139,15 +139,13 @@ namespace FEM {
                 F_global_(bc.first) = bc.second;
             }
 
-            // ==================== FIX START ====================
-            // K_global_.prune([](const typename Eigen::SparseMatrix<TScalar>::StorageIndex&,
-            //                    const typename Eigen::SparseMatrix<TScalar>::StorageIndex&,
-            //                    const TScalar& value) {
-            //     // The comparison must be between two double-precision floating-point numbers.
-            //     // std::abs(complex) returns a double (the magnitude).
-            //     return std::abs(value) > 1e-12;
-            // });
-            // ===================== FIX END =====================
+            K_global_.prune([](const typename Eigen::SparseMatrix<TScalar>::StorageIndex&,
+                               const typename Eigen::SparseMatrix<TScalar>::StorageIndex&,
+                               const TScalar& value) {
+                // The comparison must be between two double-precision floating-point numbers.
+                // std::abs(complex) returns a double (the magnitude).
+                return std::abs(value) > 1e-12;
+            });
         }
 
         std::unique_ptr<Mesh> mesh_;

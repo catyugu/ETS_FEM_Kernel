@@ -97,7 +97,7 @@ std::string getName() const override;
 与之前版本相比，该类的主要变化包括：
 
 1. 实现了单元类型过滤机制，确保只有适当类型的单元参与域内组装
-2. 添加了 [shouldAssembleElement](file:///E:/code/cpp/ETS_FEM_Kernel/fem/physics/Electrostatics.hpp#L58-L75) 方法，用于判断单元是否应该参与组装
+2. 添加了 `shouldAssembleElement` 方法，用于判断单元是否应该参与组装
 3. 移除了硬编码的节点数
 
 这些改进使得物理场可以处理混合网格，即同时包含不同类型和节点数的单元，并确保只有适当类型的单元参与计算。

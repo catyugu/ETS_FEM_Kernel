@@ -23,7 +23,7 @@ class ReferenceElement
 - `order` - 积分阶次
 
 **返回值:**
-- 指定单元类型和阶次的 [ReferenceElementData](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/ReferenceElement.hpp#L18-L23) 结构体的常量引用
+- 指定单元类型和阶次的 `ReferenceElementData`结构体的常量引用
 
 如果指定的单元类型和阶次的数据尚未缓存，则会先进行预计算并缓存。
 
@@ -40,9 +40,9 @@ class ReferenceElement
 
 ## 实现细节
 
-`ReferenceElement` 类使用静态函数和静态成员变量实现单例模式的缓存管理。它维护一个映射表，键为单元类型和积分阶次的组合，值为预计算的 [ReferenceElementData](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/ReferenceElement.hpp#L18-L23) 数据。
+`ReferenceElement` 类使用静态函数和静态成员变量实现单例模式的缓存管理。它维护一个映射表，键为单元类型和积分阶次的组合，值为预计算的 `ReferenceElementData` 数据。
 
-当请求特定类型和阶次的数据时，如果数据已在缓存中，则直接返回；否则，调用 [precompute](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/ReferenceElement.hpp#L33-L59) 函数进行预计算，并将结果存储在缓存中。
+当请求特定类型和阶次的数据时，如果数据已在缓存中，则直接返回；否则，调用`precompute`函数进行预计算，并将结果存储在缓存中。
 
 支持的单元类型包括：
 - 线单元（ElementType::Line）
