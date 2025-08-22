@@ -3,6 +3,11 @@ cmake_minimum_required(VERSION 3.16)
 
 # 项目名称和 C++ 标准
 project(ETS_FEM_Kernel CXX)
+
+# 在 project() 命令之后添加
+find_package(OpenMP REQUIRED)
+
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -61,7 +66,6 @@ add_library(fem_library STATIC ${FEM_SOURCES})
 target_include_directories(fem_library PUBLIC
         ${EIGEN3_INCLUDE_DIRS}
 )
-
 # --- 构建主应用程序 ---
 
 # 收集应用层源文件
@@ -84,6 +88,13 @@ add_executable(fem_tests ${TEST_SOURCES})
 # 链接测试程序到 GoogleTest 和我们的核心库
 target_link_libraries(fem_tests PRIVATE fem_library gtest_main)
 
+if(OpenMP_FOUND)
+    message(STATUS "OpenMP found, enabling parallelization.")
+    target_link_libraries(fem_library PUBLIC OpenMP::OpenMP_CXX)
+    target_link_libraries(solver_app PUBLIC OpenMP::OpenMP_CXX)
+    target_link_libraries(fem_tests PUBLIC OpenMP::OpenMP_CXX)
+endif()
+
 # 自动将测试添加到 CTest
 include(GoogleTest)
 gtest_discover_tests(fem_tests)
@@ -91,9 +102,13 @@ gtest_discover_tests(fem_tests)
 # --- 输出信息 ---
 message(STATUS "Eigen3 include dirs: ${EIGEN3_INCLUDE_DIRS}")
 message(STATUS "Building application 'solver_app' and tests 'fem_tests'...")
+
+
 if(MSVC)
     # 禁用 C4819 警告
     target_compile_options(fem_tests PRIVATE /wd4819)
     target_compile_options(fem_library PRIVATE /wd4819)
     target_compile_options(solver_app PRIVATE /wd4819)
 endif()
+
+
