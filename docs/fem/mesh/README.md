@@ -32,9 +32,9 @@ Mesh 类还提供了创建规则网格的静态工厂方法，包括一维、二
 
 ### [Geometry](classes/Geometry.md)
 
-几何类，作为顶层容器持有核心的Mesh对象以及所有BoundaryDefinition对象。它将网格的几何/拓扑信息与边界的语义定义分离开来，提供更清晰的接口。
+几何类，作为顶层容器持有核心的Mesh对象以及所有Boundary对象。它将网格的几何/拓扑信息与边界的语义定义分离开来，提供更清晰的接口。
 
-### [BoundaryDefinition](classes/BoundaryDefinition.md)
+### [Boundary](classes/Boundary.md)
 
 边界定义类，用于定义一个命名的边界及其包含的边界单元。该类包含边界的名称以及构成该边界的低维单元。
 
@@ -52,7 +52,7 @@ Mesh 模块是整个有限元框架的基础，被 core 模块和 physics 模块
 
 ## 边界元素支持
 
-Mesh类现在通过Geometry和BoundaryDefinition类管理边界元素：
+Mesh类现在通过Geometry和Boundary类管理边界元素：
 
 ```cpp
 // 创建几何对象
@@ -82,7 +82,7 @@ const auto& left_boundary = geometry->getBoundary("left");
 const auto& right_boundary = geometry->getBoundary("right");
 
 // 添加自定义边界定义
-auto custom_boundary = std::make_unique<FEM::BoundaryDefinition>("custom");
+auto custom_boundary = std::make_unique<FEM::Boundary>("custom");
 // ... 添加边界单元 ...
 geometry->addBoundary(std::move(custom_boundary));
 ```

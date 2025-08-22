@@ -179,5 +179,5 @@ auto geometry = FEM::Mesh::create_uniform_2d_mesh(1.0, 1.0, 10, 10);
 - [Node](Node.md) - 节点类
 - [Element](Element.md) - 单元类
 - [Geometry](Geometry.md) - 几何类
-- [BoundaryDefinition](BoundaryDefinition.md) - 边界定义类
+- [Boundary](Boundary.md) - 边界定义类
 - STL - 向量、智能指针等标准库组件

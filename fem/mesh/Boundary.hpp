@@ -8,9 +8,9 @@
 #include <set>
 
 namespace FEM {
-    class BoundaryDefinition {
+    class Boundary {
     public:
-        BoundaryDefinition(std::string  name) : name_(std::move(name)) {}
+        Boundary(std::string  name) : name_(std::move(name)) {}
 
         void addElement(std::unique_ptr<Element> element) {
             elements_.push_back(std::move(element));

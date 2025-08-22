@@ -1,6 +1,6 @@
 #include "Mesh.hpp"
 #include "Geometry.hpp"
-#include "BoundaryDefinition.hpp"
+#include "Boundary.hpp"
 #include "Element.hpp"
 #include <stdexcept>
 #include <algorithm>
@@ -269,14 +269,14 @@ namespace FEM {
         auto geometry = std::make_unique<Geometry>(std::move(mesh));
 
         // 添加边界定义
-        auto left_bnd = std::make_unique<BoundaryDefinition>("left");
+        auto left_bnd = std::make_unique<Boundary>("left");
         auto left_node = geometry->getMesh().getNodeById(0);
         if (left_node) {
             left_bnd->addElement(std::make_unique<PointElement>(0, std::vector<Node*>{left_node}));
         }
         geometry->addBoundary(std::move(left_bnd));
 
-        auto right_bnd = std::make_unique<BoundaryDefinition>("right");
+        auto right_bnd = std::make_unique<Boundary>("right");
         auto right_node = geometry->getMesh().getNodeById(num_elements);
         if (right_node) {
             right_bnd->addElement(std::make_unique<PointElement>(1, std::vector<Node*>{right_node}));
@@ -318,7 +318,7 @@ namespace FEM {
         
         // 添加边界定义
         // 底边 (y=0)
-        auto bottom_bnd = std::make_unique<BoundaryDefinition>("bottom");
+        auto bottom_bnd = std::make_unique<Boundary>("bottom");
         for (int i = 0; i <= nx; ++i) {
             auto node = geometry->getMesh().getNodeById(i);
             if (node) {
@@ -328,7 +328,7 @@ namespace FEM {
         geometry->addBoundary(std::move(bottom_bnd));
         
         // 顶边 (y=height)
-        auto top_bnd = std::make_unique<BoundaryDefinition>("top");
+        auto top_bnd = std::make_unique<Boundary>("top");
         for (int i = 0; i <= nx; ++i) {
             auto node = geometry->getMesh().getNodeById(ny * (nx + 1) + i);
             if (node) {
@@ -338,7 +338,7 @@ namespace FEM {
         geometry->addBoundary(std::move(top_bnd));
         
         // 左边 (x=0)
-        auto left_bnd = std::make_unique<BoundaryDefinition>("left");
+        auto left_bnd = std::make_unique<Boundary>("left");
         for (int j = 0; j <= ny; ++j) {
             auto node = geometry->getMesh().getNodeById(j * (nx + 1));
             if (node) {
@@ -348,7 +348,7 @@ namespace FEM {
         geometry->addBoundary(std::move(left_bnd));
         
         // 右边 (x=width)
-        auto right_bnd = std::make_unique<BoundaryDefinition>("right");
+        auto right_bnd = std::make_unique<Boundary>("right");
         for (int j = 0; j <= ny; ++j) {
             auto node = geometry->getMesh().getNodeById(j * (nx + 1) + nx);
             if (node) {
@@ -404,8 +404,8 @@ namespace FEM {
         
         // 添加边界定义
         // x方向的两个面
-        auto left_bnd = std::make_unique<BoundaryDefinition>("left"); // x=0面
-        auto right_bnd = std::make_unique<BoundaryDefinition>("right"); // x=width面
+        auto left_bnd = std::make_unique<Boundary>("left"); // x=0面
+        auto right_bnd = std::make_unique<Boundary>("right"); // x=width面
         for (int k = 0; k <= nz; ++k) {
             for (int j = 0; j <= ny; ++j) {
                 auto left_node = geometry->getMesh().getNodeById(k * (nx + 1) * (ny + 1) + j * (nx + 1));
@@ -423,8 +423,8 @@ namespace FEM {
         geometry->addBoundary(std::move(right_bnd));
         
         // y方向的两个面
-        auto front_bnd = std::make_unique<BoundaryDefinition>("front"); // y=0面
-        auto back_bnd = std::make_unique<BoundaryDefinition>("back"); // y=height面
+        auto front_bnd = std::make_unique<Boundary>("front"); // y=0面
+        auto back_bnd = std::make_unique<Boundary>("back"); // y=height面
         for (int k = 0; k <= nz; ++k) {
             for (int i = 0; i <= nx; ++i) {
                 auto front_node = geometry->getMesh().getNodeById(k * (nx + 1) * (ny + 1) + i);
@@ -442,8 +442,8 @@ namespace FEM {
         geometry->addBoundary(std::move(back_bnd));
         
         // z方向的两个面
-        auto bottom_bnd = std::make_unique<BoundaryDefinition>("bottom"); // z=0面
-        auto top_bnd = std::make_unique<BoundaryDefinition>("top"); // z=depth面
+        auto bottom_bnd = std::make_unique<Boundary>("bottom"); // z=0面
+        auto top_bnd = std::make_unique<Boundary>("top"); // z=depth面
         for (int j = 0; j <= ny; ++j) {
             for (int i = 0; i <= nx; ++i) {
                 auto bottom_node = geometry->getMesh().getNodeById(j * (nx + 1) + i);

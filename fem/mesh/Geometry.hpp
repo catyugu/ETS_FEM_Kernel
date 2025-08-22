@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Mesh.hpp"
-#include "BoundaryDefinition.hpp"
+#include "Boundary.hpp"
 #include <map>
 #include <string>
 #include <memory>
@@ -16,11 +16,11 @@ namespace FEM {
         Mesh& getMesh() { return *mesh_; }
         const Mesh& getMesh() const { return *mesh_; }
 
-        void addBoundary(std::unique_ptr<BoundaryDefinition> boundary) {
+        void addBoundary(std::unique_ptr<Boundary> boundary) {
             boundaries_[boundary->getName()] = std::move(boundary);
         }
 
-        const BoundaryDefinition& getBoundary(const std::string& name) const {
+        const Boundary& getBoundary(const std::string& name) const {
             auto it = boundaries_.find(name);
             if (it == boundaries_.end()) {
                 throw std::runtime_error("Boundary with name '" + name + "' not found.");
@@ -30,6 +30,6 @@ namespace FEM {
 
     private:
         std::unique_ptr<Mesh> mesh_;
-        std::map<std::string, std::unique_ptr<BoundaryDefinition>> boundaries_;
+        std::map<std::string, std::unique_ptr<Boundary>> boundaries_;
     };
 }

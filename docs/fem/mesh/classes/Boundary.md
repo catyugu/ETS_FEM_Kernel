@@ -1,18 +1,18 @@
-# BoundaryDefinition 类
+# Boundary 类
 
 ## 描述
 
-`BoundaryDefinition` 类用于定义一个命名的边界。这个类将包含边界的名称以及构成该边界的低维单元（例如，对于3D六面体单元的边界，其边界单元是2D的四边形单元）。它提供了一种清晰的方式来管理和访问边界信息，将边界语义与网格几何信息分离。
+`Boundary` 类用于定义一个命名的边界。这个类将包含边界的名称以及构成该边界的低维单元（例如，对于3D六面体单元的边界，其边界单元是2D的四边形单元）。它提供了一种清晰的方式来管理和访问边界信息，将边界语义与网格几何信息分离。
 
 ## 类定义
 
 ```cpp
-class BoundaryDefinition
+class Boundary
 ```
 
 ## 构造函数
 
-### BoundaryDefinition(const std::string& name)
+### Boundary(const std::string& name)
 
 构造函数，使用给定的名称创建边界定义。
 
@@ -53,7 +53,7 @@ class BoundaryDefinition
 
 ```cpp
 // 创建边界定义
-auto boundary = std::make_unique<FEM::BoundaryDefinition>("left");
+auto boundary = std::make_unique<FEM::Boundary>("left");
 
 // 添加边界单元
 auto node = mesh->getNodeById(0);
@@ -69,7 +69,7 @@ std::vector<int> node_ids = boundary->getUniqueNodeIds();
 
 ## 实现细节
 
-`BoundaryDefinition` 类通过存储边界单元和提供辅助函数来获取唯一节点ID，简化了边界条件的施加过程。它与 `Geometry` 类配合使用，实现了网格几何信息与边界语义定义的分离。
+`Boundary` 类通过存储边界单元和提供辅助函数来获取唯一节点ID，简化了边界条件的施加过程。它与 `Geometry` 类配合使用，实现了网格几何信息与边界语义定义的分离。
 
 ## 依赖关系
 
