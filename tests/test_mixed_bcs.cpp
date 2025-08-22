@@ -16,8 +16,6 @@
 // 测试套件，用于验证混合边界条件（诺伊曼 + 柯西）
 class MixedBoundaryConditionsTest : public ::testing::Test {
 protected:
-    // 定义物理和几何参数
-    static constexpr int problem_dim = 1;
     const double L = 1.0;         // 杆的长度
     const double k = 2.0;         // 热导率
     const double q0 = 50.0;       // 左端的热流密度 (Neumann)
@@ -33,6 +31,7 @@ protected:
 
 // 测试案例：1D热传导问题，左端为Neumann，右端为Cauchy
 TEST_F(MixedBoundaryConditionsTest, HeatTransfer_Neumann_Cauchy_1D) {
+    constexpr int problem_dim = 1;
     // 1. 创建网格
     auto mesh = FEM::Mesh::create_uniform_1d_mesh(L, num_elements);
 
@@ -62,6 +61,7 @@ TEST_F(MixedBoundaryConditionsTest, HeatTransfer_Neumann_Cauchy_1D) {
     auto problem = std::make_unique<FEM::Problem<problem_dim>>(
         std::move(mesh), std::move(heat_physics)
     );
+
 
     // 7. 组装并求解
     problem->assemble();
@@ -167,10 +167,10 @@ TEST_F(MixedBoundaryConditionsTest, HeatTransfer_3D_Analytic) {
     // 顶面 (z=1): Neumann, -k*dT/dz = -1*5 = -5
     heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("top", -5.0));
     // 其他四个侧面: Neumann, dT/dn = 0 (绝热)
-    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("left", 0.0));
-    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("right", 0.0));
     heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("front", 0.0));
     heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("back", 0.0));
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("left", 0.0));
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("right", 0.0));
 
     // --- 5. 创建问题并求解 ---
     auto problem = std::make_unique<FEM::Problem<problem_dim>>(std::move(mesh), std::move(heat_physics));
