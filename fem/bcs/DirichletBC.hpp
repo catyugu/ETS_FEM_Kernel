@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../core/BoundaryCondition.hpp"
+#include "../mesh/Geometry.hpp"
 #include <complex>
 
 namespace FEM {
@@ -11,7 +12,7 @@ namespace FEM {
             : BoundaryCondition<TDim, TScalar>(boundary_name), value_(value) {}
 
         // 留空，由 Problem 类统一处理
-        void apply(const Mesh& mesh, const DofManager& dof_manager,
+        void apply(const Geometry& geometry, const DofManager& dof_manager,
                    std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const override {}
         
         BCType getType() const override { return BCType::Dirichlet; }

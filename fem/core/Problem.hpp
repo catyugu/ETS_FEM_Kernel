@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../mesh/Mesh.hpp"
+#include "../mesh/Geometry.hpp"
 #include "DofManager.hpp"
 #include "../physics/PhysicsField.hpp"
 #include "LinearSolver.hpp"
@@ -17,17 +18,17 @@ namespace FEM {
     template<int TDim, typename TScalar = double>
     class Problem {
     public:
-        Problem(std::unique_ptr<Mesh> mesh, std::unique_ptr<PhysicsField<TDim, TScalar>> physics, SolverType solver_type = SolverType::SparseLU)
-            : mesh_(std::move(mesh)), solver_type_(solver_type) {
+        Problem(std::unique_ptr<Geometry> geometry, std::unique_ptr<PhysicsField<TDim, TScalar>> physics, SolverType solver_type = SolverType::SparseLU)
+            : geometry_(std::move(geometry)), solver_type_(solver_type) {
             physics_fields_.push_back(std::move(physics));
-            dof_manager_ = std::make_unique<DofManager>(*mesh_);
+            dof_manager_ = std::make_unique<DofManager>(geometry_->getMesh());
             dof_manager_->buildDofMap(1);
             initializeSystem();
         }
 
-        Problem(std::unique_ptr<Mesh> mesh, std::vector<std::unique_ptr<PhysicsField<TDim, TScalar>>> physics_fields, SolverType solver_type = SolverType::SparseLU)
-            : mesh_(std::move(mesh)), physics_fields_(std::move(physics_fields)), solver_type_(solver_type) {
-            dof_manager_ = std::make_unique<DofManager>(*mesh_);
+        Problem(std::unique_ptr<Geometry> geometry, std::vector<std::unique_ptr<PhysicsField<TDim, TScalar>>> physics_fields, SolverType solver_type = SolverType::SparseLU)
+            : geometry_(std::move(geometry)), physics_fields_(std::move(physics_fields)), solver_type_(solver_type) {
+            dof_manager_ = std::make_unique<DofManager>(geometry_->getMesh());
             dof_manager_->buildDofMap(1);
             initializeSystem();
         }
@@ -39,13 +40,13 @@ namespace FEM {
             std::vector<Eigen::Triplet<TScalar>> triplet_list;
 
             // 预估非零元数量并为其预留空间，以避免多次内存重分配
-            auto sparsity_pattern = dof_manager_->computeSparsityPattern(*mesh_);
+            auto sparsity_pattern = dof_manager_->computeSparsityPattern(geometry_->getMesh());
             triplet_list.reserve(sparsity_pattern.size());
 
             for (const auto& physics : physics_fields_) {
                 // 将 triplet_list 传递给物理场进行填充，而不是 K_global_
-                physics->assemble_volume(*mesh_, *dof_manager_, triplet_list, F_global_);
-                physics->applyNaturalBCs(*mesh_, *dof_manager_, triplet_list, F_global_);
+                physics->assemble_volume(geometry_->getMesh(), *dof_manager_, triplet_list, F_global_);
+                physics->applyNaturalBCs(*geometry_, *dof_manager_, triplet_list, F_global_);
             }
 
             // 在所有单元和边界计算完成后，一次性高效构建稀疏矩阵
@@ -58,7 +59,8 @@ namespace FEM {
             U_solution_ = solver.solve(K_global_, F_global_);
         }
 
-        const Mesh& getMesh() const { return *mesh_; }
+        const Mesh& getMesh() const { return geometry_->getMesh(); }
+        const Geometry& getGeometry() const { return *geometry_; }
         const Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& getSolution() const { return U_solution_; }
         const DofManager& getDofManager() const { return *dof_manager_; }
 
@@ -91,7 +93,8 @@ namespace FEM {
                         if (dirichlet_bc) {
                             const TScalar bc_value = dirichlet_bc->getValue();
                             try {
-                                const auto& boundary_nodes = mesh_->getBoundaryNodes(dirichlet_bc->getBoundaryName());
+                                // 使用新的Geometry接口获取边界节点
+                                const auto& boundary_nodes = geometry_->getBoundary(dirichlet_bc->getBoundaryName()).getUniqueNodeIds();
                                 for (int node_id : boundary_nodes) {
                                     int dof_index = dof_manager_->getNodeDof(node_id, 0);
                                     all_dirichlet_dofs.push_back({dof_index, bc_value});
@@ -148,7 +151,7 @@ namespace FEM {
             });
         }
 
-        std::unique_ptr<Mesh> mesh_;
+        std::unique_ptr<Geometry> geometry_;
         std::vector<std::unique_ptr<PhysicsField<TDim, TScalar>>> physics_fields_;
         std::unique_ptr<DofManager> dof_manager_;
         SolverType solver_type_;

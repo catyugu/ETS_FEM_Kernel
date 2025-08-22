@@ -35,7 +35,7 @@ DirichletBC(const std::string& boundary_name, TScalar value)
 应用Dirichlet边界条件（空实现）。
 
 ```cpp
-void apply(const Mesh& mesh, const DofManager& dof_manager,
+void apply(const Geometry& geometry, const DofManager& dof_manager,
            std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const override
 ```
 
@@ -84,3 +84,4 @@ wave_physics->addBoundaryCondition(std::move(complex_bc));
 - Dirichlet边界条件的处理方式特殊，由Problem类统一处理
 - 边界名称必须与网格中的边界标识符匹配
 - 值的单位取决于具体物理场类型
+- apply方法现在接受Geometry对象而不是Mesh对象

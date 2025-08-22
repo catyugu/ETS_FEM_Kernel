@@ -12,6 +12,7 @@
 #include "kernels/HeatDiffusionKernel.hpp"
 #include "io/Importer.hpp"
 #include "bcs/DirichletBC.hpp"
+#include "mesh/BoundaryDefinition.hpp"
 #include "test_utils.hpp"
 
 using namespace FEM;
@@ -97,13 +98,27 @@ TEST_F(TestElectrostatics, SolveElectrostaticsOnImportedMesh) {
             }
         }
 
-        // 为导入的网格添加边界信息
+        // 创建Geometry对象并添加边界定义
+        auto geometry = std::make_unique<Geometry>(std::move(mesh));
+        
+        // 添加边界定义到几何对象
+        auto left_bnd = std::make_unique<BoundaryDefinition>("left_boundary");
         for (int node_id : left_boundary_nodes) {
-            mesh->addBoundaryNode("left_boundary", node_id);
+            auto node = geometry->getMesh().getNodeById(node_id);
+            if (node) {
+                left_bnd->addElement(std::make_unique<PointElement>(node_id, std::vector<Node*>{node}));
+            }
         }
+        geometry->addBoundary(std::move(left_bnd));
+        
+        auto right_bnd = std::make_unique<BoundaryDefinition>("right_boundary");
         for (int node_id : right_boundary_nodes) {
-            mesh->addBoundaryNode("right_boundary", node_id);
+            auto node = geometry->getMesh().getNodeById(node_id);
+            if (node) {
+                right_bnd->addElement(std::make_unique<PointElement>(node_id, std::vector<Node*>{node}));
+            }
         }
+        geometry->addBoundary(std::move(right_bnd));
 
         // 添加边界条件到物理场
         physics->addBoundaryCondition(
@@ -120,7 +135,7 @@ TEST_F(TestElectrostatics, SolveElectrostaticsOnImportedMesh) {
         std::cout << "Right boundary conditions: " << right_bcs << std::endl;
 
         // 创建问题实例
-        auto problem = std::make_unique<Problem<dim>>(std::move(mesh), std::move(physics), SolverType::SparseLU);
+        auto problem = std::make_unique<Problem<dim>>(std::move(geometry), std::move(physics), SolverType::SparseLU);
 
         ::Utils::Profiler::instance().end();
         // 组装和求解

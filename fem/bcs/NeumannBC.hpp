@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "../core/BoundaryCondition.hpp"
+#include "../mesh/Geometry.hpp"
 #include "../core/FEFaceValues.hpp"
 #include <complex>
 
@@ -13,10 +14,10 @@ namespace FEM {
 
         BCType getType() const override { return BCType::Neumann; }
 
-        void apply(const Mesh& mesh, const DofManager& dof_manager,
+        void apply(const Geometry& geometry, const DofManager& dof_manager,
                    std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const override {
 
-            const auto& boundary_elements = mesh.getBoundaryElements(this->boundary_name_);
+            const auto& boundary_elements = geometry.getBoundary(this->boundary_name_).getElements();
             for (const auto& elem_ptr : boundary_elements) {
                 const Element& face_element = *elem_ptr;
                 FEFaceValues fe_face_values(face_element, 1, AnalysisType::SCALAR_DIFFUSION);

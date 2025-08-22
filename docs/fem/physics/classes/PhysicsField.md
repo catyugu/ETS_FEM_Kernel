@@ -15,7 +15,7 @@ public:
     virtual void assemble_volume(const Mesh& mesh, const DofManager& dof_manager,
                          std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) = 0;
                          
-    virtual void applyNaturalBCs(const Mesh& mesh, const DofManager& dof_manager,
+    virtual void applyNaturalBCs(const Geometry& geometry, const DofManager& dof_manager,
                                         std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global);
                                         
     virtual std::string getName() const = 0;
@@ -46,14 +46,14 @@ virtual void assemble_volume(const Mesh& mesh, const DofManager& dof_manager,
 ### applyNaturalBCs
 
 ```
-virtual void applyNaturalBCs(const Mesh& mesh, const DofManager& dof_manager,
+virtual void applyNaturalBCs(const Geometry& geometry, const DofManager& dof_manager,
                                     std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global);
 ```
 
 **描述**: 应用自然边界条件（Neumann和Cauchy边界条件）。默认实现为空，具体物理场可以重写此方法。与之前版本不同，现在使用Triplet列表而不是直接操作稀疏矩阵，以提高组装效率。
 
 **参数**:
-- `mesh` - 网格对象
+- `geometry` - 几何对象（包含网格和边界定义）
 - `dof_manager` - 自由度管理器
 - `triplet_list` - 用于存储矩阵元素的Triplet列表
 - `F_global` - 全局载荷向量
@@ -77,7 +77,8 @@ auto physics = std::make_unique<FEM::HeatTransfer<2>>();
 auto physics = std::make_unique<FEM::Electrostatics<2>>();
 
 // 在Problem类中使用
-auto problem = std::make_unique<FEM::Problem<2>>(std::move(mesh), std::move(physics));
+auto geometry = FEM::Mesh::create_uniform_1d_mesh(1.0, 10);
+auto problem = std::make_unique<FEM::Problem<2>>(std::move(geometry), std::move(physics));
 ```
 
 ## 注意事项
@@ -86,9 +87,11 @@ auto problem = std::make_unique<FEM::Problem<2>>(std::move(mesh), std::move(phys
 2. `assemble`方法是有限元计算的核心，负责将局部单元矩阵组装成全局矩阵
 3. `getName`方法用于标识物理场类型，便于调试和日志记录
 4. 为了提高性能，现在使用Triplet列表而不是直接操作稀疏矩阵
+5. `applyNaturalBCs`方法现在接受Geometry对象而不是Mesh对象
 
 ## 依赖关系
 
 - [Mesh](../../mesh/classes/Mesh.md) - 网格类
+- [Geometry](../../mesh/classes/Geometry.md) - 几何类
 - [DofManager](../../core/classes/DofManager.md) - 自由度管理器
 - Eigen - 稀疏矩阵运算库

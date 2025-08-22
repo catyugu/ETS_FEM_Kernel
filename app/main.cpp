@@ -14,7 +14,7 @@ int main() {
     Utils::Logger::instance().info("--- Setting up 1D Heat Conduction Problem (Refactored) ---");
 
     // 1. 创建网格 (现在它内部已经命名了 "left" 和 "right" 边界)
-    auto mesh = FEM::Mesh::create_uniform_1d_mesh(1.0, 10);
+    auto geometry = FEM::Mesh::create_uniform_1d_mesh(1.0, 10);
 
     // 2. 定义材料
     FEM::Material copper("Copper");
@@ -37,7 +37,7 @@ int main() {
     );
 
     // 6. 创建 Problem
-    auto problem = std::make_unique<FEM::Problem<problem_dim>>(std::move(mesh), std::move(heat_physics));
+    auto problem = std::make_unique<FEM::Problem<problem_dim>>(std::move(geometry), std::move(heat_physics));
 
     // 7. 组装
     problem->assemble();

@@ -36,7 +36,7 @@ CauchyBC(const std::string& boundary_name, TScalar h_val, TScalar T_inf_val)
 应用Cauchy边界条件。
 
 ```cpp
-void apply(const Mesh& mesh, const DofManager& dof_manager,
+void apply(const Geometry& geometry, const DofManager& dof_manager,
            std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const override;
 ```
 
@@ -90,3 +90,4 @@ physics->addBoundaryCondition(std::move(robin_bc));
 - 参数值的单位取决于具体物理场类型
 - 该实现使用FEFaceValues进行边界积分计算
 - 为了提高性能，现在使用Triplet列表而不是直接操作稀疏矩阵
+- apply方法现在接受Geometry对象而不是Mesh对象

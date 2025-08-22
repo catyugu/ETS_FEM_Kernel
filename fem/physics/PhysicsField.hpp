@@ -4,6 +4,7 @@
 #include <memory>
 #include <complex>
 #include "../mesh/Mesh.hpp"
+#include "../mesh/Geometry.hpp"
 #include "../core/DofManager.hpp"
 #include "../core/BoundaryCondition.hpp" // 引入新头文件
 #include "../kernels/Kernel.hpp"
@@ -88,16 +89,16 @@ namespace FEM {
 
         /**
          * @brief 应用"自然"边界条件 (Neumann, Cauchy)
-         * @param mesh 网格对象
+         * @param geometry 几何对象
          * @param dof_manager 自由度管理器
          * @param triplet_list 全局刚度矩阵的Triplet列表
          * @param F_global 全局载荷向量
          */
-        void applyNaturalBCs(const Mesh& mesh, const DofManager& dof_manager,
+        void applyNaturalBCs(const Geometry& geometry, const DofManager& dof_manager,
                              std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const {
             for (const auto& bc : boundary_conditions_) {
                 if (bc->getType() != BCType::Dirichlet) {
-                    bc->apply(mesh, dof_manager, triplet_list, F_global);
+                    bc->apply(geometry, dof_manager, triplet_list, F_global);
                 }
             }
         }

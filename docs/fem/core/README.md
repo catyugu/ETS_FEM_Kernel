@@ -22,7 +22,8 @@
 核心模块通过Problem类协调整个求解过程：
 
 ```cpp
-auto problem = std::make_unique<FEM::Problem<2>>(std::move(mesh), std::move(physics));
+auto geometry = FEM::Mesh::create_uniform_1d_mesh(1.0, 10);
+auto problem = std::make_unique<FEM::Problem<2>>(std::move(geometry), std::move(physics));
 problem->assemble();
 problem->solve();
 ```
@@ -34,6 +35,7 @@ problem->solve();
 3. 为了提高性能，现在使用Triplet列表而不是直接操作稀疏矩阵
 4. 支持多物理场耦合
 5. 通过 [ReferenceElement](classes/ReferenceElement.md) 类利用缓存机制避免重复计算
+6. Problem类现在接受Geometry对象而不是Mesh对象
 
 ## 依赖关系
 

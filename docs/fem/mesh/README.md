@@ -30,6 +30,14 @@ Mesh 类还提供了创建规则网格的静态工厂方法，包括一维、二
 
 单元类，表示网格中的单元，是各种具体单元类型的基类。
 
+### [Geometry](classes/Geometry.md)
+
+几何类，作为顶层容器持有核心的Mesh对象以及所有BoundaryDefinition对象。它将网格的几何/拓扑信息与边界的语义定义分离开来，提供更清晰的接口。
+
+### [BoundaryDefinition](classes/BoundaryDefinition.md)
+
+边界定义类，用于定义一个命名的边界及其包含的边界单元。该类包含边界的名称以及构成该边界的低维单元。
+
 ## 依赖关系
 
 Mesh 模块是整个有限元框架的基础，被 core 模块和 physics 模块所依赖。它不依赖于其他模块，仅使用标准库组件。
@@ -40,39 +48,41 @@ Mesh 模块是整个有限元框架的基础，被 core 模块和 physics 模块
 2. **统一接口**：所有单元类型继承自统一基类
 3. **边界支持**：支持边界单元的定义和管理
 4. **工厂模式**：提供统一网格生成接口
+5. **职责分离**：将网格几何信息与边界语义定义分离
 
 ## 边界元素支持
 
-Mesh类现在支持边界元素的管理，包括：
+Mesh类现在通过Geometry和BoundaryDefinition类管理边界元素：
 
-```
-// 添加边界单元
-mesh->addBoundaryElement("boundary_name", std::make_unique<LineElement>(...));
+```cpp
+// 创建几何对象
+auto geometry = FEM::Mesh::create_uniform_1d_mesh(1.0, 10);
+
+// 获取边界定义
+const auto& boundary = geometry->getBoundary("left");
 
 // 获取边界单元
-const auto& boundary_elements = mesh->getBoundaryElements("boundary_name");
+const auto& boundary_elements = boundary.getElements();
 
 // 获取边界节点
-const auto& boundary_nodes = mesh->getBoundaryNodes("boundary_name");
+const auto& boundary_nodes = boundary.getUniqueNodeIds();
 ```
 
 ## 使用示例
 
-```
-// 创建网格
-auto mesh = std::make_unique<Mesh>();
+```cpp
+// 创建几何对象（包含网格和边界定义）
+auto geometry = FEM::Mesh::create_uniform_2d_mesh(1.0, 1.0, 10, 10);
 
-// 添加节点和单元
-mesh->addNode(std::make_unique<Node>(0, std::vector<double>{0.0, 0.0}));
-mesh->addNode(std::make_unique<Node>(1, std::vector<double>{1.0, 0.0}));
-mesh->addNode(std::make_unique<Node>(2, std::vector<double>{1.0, 1.0}));
-mesh->addNode(std::make_unique<Node>(3, std::vector<double>{0.0, 1.0}));
+// 访问网格
+auto& mesh = geometry->getMesh();
 
-std::vector<FEM::Node*> nodes = {mesh->getNodes()[0].get(), mesh->getNodes()[1].get(), 
-                                 mesh->getNodes()[2].get(), mesh->getNodes()[3].get()};
-mesh->addElement(std::make_unique<QuadElement>(0, nodes));
+// 访问边界定义
+const auto& left_boundary = geometry->getBoundary("left");
+const auto& right_boundary = geometry->getBoundary("right");
 
-// 添加边界信息
-std::vector<FEM::Node*> boundary_nodes = {mesh->getNodes()[0].get(), mesh->getNodes()[1].get()};
-mesh->addBoundaryElement("bottom", std::make_unique<LineElement>(0, boundary_nodes));
+// 添加自定义边界定义
+auto custom_boundary = std::make_unique<FEM::BoundaryDefinition>("custom");
+// ... 添加边界单元 ...
+geometry->addBoundary(std::move(custom_boundary));
 ```

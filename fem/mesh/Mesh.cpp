@@ -1,4 +1,6 @@
 #include "Mesh.hpp"
+#include "Geometry.hpp"
+#include "BoundaryDefinition.hpp"
 #include "Element.hpp"
 #include <stdexcept>
 #include <algorithm>
@@ -254,7 +256,7 @@ namespace FEM {
         }
     }
 
-    std::unique_ptr<Mesh> Mesh::create_uniform_1d_mesh(double length, int num_elements) {
+    std::unique_ptr<Geometry> Mesh::create_uniform_1d_mesh(double length, int num_elements) {
         auto mesh = std::make_unique<Mesh>();
         double h = length / num_elements;
         for (int i = 0; i <= num_elements; ++i) {
@@ -264,19 +266,31 @@ namespace FEM {
             mesh->addElement(std::make_unique<LineElement>(i, std::vector<Node*>{mesh->getNodeById(i), mesh->getNodeById(i + 1)}));
         }
         
-        // 添加边界信息
-        mesh->addBoundaryNode("left", 0);
-        mesh->addBoundaryNode("right", num_elements);
+        auto geometry = std::make_unique<Geometry>(std::move(mesh));
+
+        // 添加边界定义
+        auto left_bnd = std::make_unique<BoundaryDefinition>("left");
+        auto left_node = geometry->getMesh().getNodeById(0);
+        if (left_node) {
+            left_bnd->addElement(std::make_unique<PointElement>(0, std::vector<Node*>{left_node}));
+        }
+        geometry->addBoundary(std::move(left_bnd));
+
+        auto right_bnd = std::make_unique<BoundaryDefinition>("right");
+        auto right_node = geometry->getMesh().getNodeById(num_elements);
+        if (right_node) {
+            right_bnd->addElement(std::make_unique<PointElement>(1, std::vector<Node*>{right_node}));
+        }
+        geometry->addBoundary(std::move(right_bnd));
         
-        // 构建拓扑结构
-        mesh->buildTopology();
+        geometry->getMesh().buildTopology();
         
-        return mesh;
+        return geometry;
     }
 
     // --- 以下是缺失的函数实现 ---
 
-    std::unique_ptr<Mesh> Mesh::create_uniform_2d_mesh(double width, double height, int nx, int ny) {
+    std::unique_ptr<Geometry> Mesh::create_uniform_2d_mesh(double width, double height, int nx, int ny) {
         auto mesh = std::make_unique<Mesh>();
         double dx = width / nx;
         double dy = height / ny;
@@ -300,31 +314,56 @@ namespace FEM {
             }
         }
         
-        // 添加边界信息 - 完善边界命名
+        auto geometry = std::make_unique<Geometry>(std::move(mesh));
+        
+        // 添加边界定义
         // 底边 (y=0)
+        auto bottom_bnd = std::make_unique<BoundaryDefinition>("bottom");
         for (int i = 0; i <= nx; ++i) {
-            mesh->addBoundaryNode("bottom", i);
+            auto node = geometry->getMesh().getNodeById(i);
+            if (node) {
+                bottom_bnd->addElement(std::make_unique<PointElement>(i, std::vector<Node*>{node}));
+            }
         }
+        geometry->addBoundary(std::move(bottom_bnd));
+        
         // 顶边 (y=height)
+        auto top_bnd = std::make_unique<BoundaryDefinition>("top");
         for (int i = 0; i <= nx; ++i) {
-            mesh->addBoundaryNode("top", ny * (nx + 1) + i);
+            auto node = geometry->getMesh().getNodeById(ny * (nx + 1) + i);
+            if (node) {
+                top_bnd->addElement(std::make_unique<PointElement>(ny * (nx + 1) + i, std::vector<Node*>{node}));
+            }
         }
+        geometry->addBoundary(std::move(top_bnd));
+        
         // 左边 (x=0)
+        auto left_bnd = std::make_unique<BoundaryDefinition>("left");
         for (int j = 0; j <= ny; ++j) {
-            mesh->addBoundaryNode("left", j * (nx + 1));
+            auto node = geometry->getMesh().getNodeById(j * (nx + 1));
+            if (node) {
+                left_bnd->addElement(std::make_unique<PointElement>(j * (nx + 1), std::vector<Node*>{node}));
+            }
         }
+        geometry->addBoundary(std::move(left_bnd));
+        
         // 右边 (x=width)
+        auto right_bnd = std::make_unique<BoundaryDefinition>("right");
         for (int j = 0; j <= ny; ++j) {
-            mesh->addBoundaryNode("right", j * (nx + 1) + nx);
+            auto node = geometry->getMesh().getNodeById(j * (nx + 1) + nx);
+            if (node) {
+                right_bnd->addElement(std::make_unique<PointElement>(j * (nx + 1) + nx, std::vector<Node*>{node}));
+            }
         }
+        geometry->addBoundary(std::move(right_bnd));
         
         // 构建拓扑结构
-        mesh->buildTopology();
+        geometry->getMesh().buildTopology();
         
-        return mesh;
+        return geometry;
     }
 
-    std::unique_ptr<Mesh> Mesh::create_uniform_3d_mesh(double width, double height, double depth, int nx, int ny, int nz) {
+    std::unique_ptr<Geometry> Mesh::create_uniform_3d_mesh(double width, double height, double depth, int nx, int ny, int nz) {
         auto mesh = std::make_unique<Mesh>();
         double dx = width / nx;
         double dy = height / ny;
@@ -361,33 +400,70 @@ namespace FEM {
             }
         }
         
-        // 添加边界信息 - 完善边界命名
+        auto geometry = std::make_unique<Geometry>(std::move(mesh));
+        
+        // 添加边界定义
         // x方向的两个面
+        auto left_bnd = std::make_unique<BoundaryDefinition>("left"); // x=0面
+        auto right_bnd = std::make_unique<BoundaryDefinition>("right"); // x=width面
         for (int k = 0; k <= nz; ++k) {
             for (int j = 0; j <= ny; ++j) {
-                mesh->addBoundaryNode("left", k * (nx + 1) * (ny + 1) + j * (nx + 1)); // x=0面
-                mesh->addBoundaryNode("right", k * (nx + 1) * (ny + 1) + j * (nx + 1) + nx); // x=width面
+                auto left_node = geometry->getMesh().getNodeById(k * (nx + 1) * (ny + 1) + j * (nx + 1));
+                if (left_node) {
+                    left_bnd->addElement(std::make_unique<PointElement>(k * (nx + 1) * (ny + 1) + j * (nx + 1), std::vector<Node*>{left_node}));
+                }
+                
+                auto right_node = geometry->getMesh().getNodeById(k * (nx + 1) * (ny + 1) + j * (nx + 1) + nx);
+                if (right_node) {
+                    right_bnd->addElement(std::make_unique<PointElement>(k * (nx + 1) * (ny + 1) + j * (nx + 1) + nx, std::vector<Node*>{right_node}));
+                }
             }
         }
+        geometry->addBoundary(std::move(left_bnd));
+        geometry->addBoundary(std::move(right_bnd));
+        
         // y方向的两个面
+        auto front_bnd = std::make_unique<BoundaryDefinition>("front"); // y=0面
+        auto back_bnd = std::make_unique<BoundaryDefinition>("back"); // y=height面
         for (int k = 0; k <= nz; ++k) {
             for (int i = 0; i <= nx; ++i) {
-                mesh->addBoundaryNode("front", k * (nx + 1) * (ny + 1) + i); // y=0面
-                mesh->addBoundaryNode("back", k * (nx + 1) * (ny + 1) + ny * (nx + 1) + i); // y=height面
+                auto front_node = geometry->getMesh().getNodeById(k * (nx + 1) * (ny + 1) + i);
+                if (front_node) {
+                    front_bnd->addElement(std::make_unique<PointElement>(k * (nx + 1) * (ny + 1) + i, std::vector<Node*>{front_node}));
+                }
+                
+                auto back_node = geometry->getMesh().getNodeById(k * (nx + 1) * (ny + 1) + ny * (nx + 1) + i);
+                if (back_node) {
+                    back_bnd->addElement(std::make_unique<PointElement>(k * (nx + 1) * (ny + 1) + ny * (nx + 1) + i, std::vector<Node*>{back_node}));
+                }
             }
         }
+        geometry->addBoundary(std::move(front_bnd));
+        geometry->addBoundary(std::move(back_bnd));
+        
         // z方向的两个面
+        auto bottom_bnd = std::make_unique<BoundaryDefinition>("bottom"); // z=0面
+        auto top_bnd = std::make_unique<BoundaryDefinition>("top"); // z=depth面
         for (int j = 0; j <= ny; ++j) {
             for (int i = 0; i <= nx; ++i) {
-                mesh->addBoundaryNode("bottom", j * (nx + 1) + i); // z=0面
-                mesh->addBoundaryNode("top", nz * (nx + 1) * (ny + 1) + j * (nx + 1) + i); // z=depth面
+                auto bottom_node = geometry->getMesh().getNodeById(j * (nx + 1) + i);
+                if (bottom_node) {
+                    bottom_bnd->addElement(std::make_unique<PointElement>(j * (nx + 1) + i, std::vector<Node*>{bottom_node}));
+                }
+                
+                auto top_node = geometry->getMesh().getNodeById(nz * (nx + 1) * (ny + 1) + j * (nx + 1) + i);
+                if (top_node) {
+                    top_bnd->addElement(std::make_unique<PointElement>(nz * (nx + 1) * (ny + 1) + j * (nx + 1) + i, std::vector<Node*>{top_node}));
+                }
             }
         }
+        geometry->addBoundary(std::move(bottom_bnd));
+        geometry->addBoundary(std::move(top_bnd));
         
         // 构建拓扑结构
-        mesh->buildTopology();
+        geometry->getMesh().buildTopology();
         
-        return mesh;
+        return geometry;
     }
 
 } // namespace FEM

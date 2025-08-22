@@ -96,7 +96,7 @@ class Mesh
 
 ## 静态工厂方法
 
-### static std::unique_ptr<Mesh> create_uniform_1d_mesh(double length, int num_elements)
+### static std::unique_ptr<Geometry> create_uniform_1d_mesh(double length, int num_elements)
 
 创建一维规则网格。
 
@@ -105,9 +105,9 @@ class Mesh
 - `num_elements` - 单元数量
 
 **返回值:**
-- 创建的网格对象的智能指针
+- 创建的几何对象的智能指针（包含网格和边界定义）
 
-### static std::unique_ptr<Mesh> create_uniform_2d_mesh(double width, double height, int nx, int ny)
+### static std::unique_ptr<Geometry> create_uniform_2d_mesh(double width, double height, int nx, int ny)
 
 创建二维规则网格。
 
@@ -118,9 +118,9 @@ class Mesh
 - `ny` - Y方向单元数量
 
 **返回值:**
-- 创建的网格对象的智能指针
+- 创建的几何对象的智能指针（包含网格和边界定义）
 
-### static std::unique_ptr<Mesh> create_uniform_3d_mesh(double width, double height, double depth, int nx, int ny, int nz)
+### static std::unique_ptr<Geometry> create_uniform_3d_mesh(double width, double height, double depth, int nx, int ny, int nz)
 
 创建三维规则网格。
 
@@ -133,7 +133,7 @@ class Mesh
 - `nz` - Z方向单元数量
 
 **返回值:**
-- 创建的网格对象的智能指针
+- 创建的几何对象的智能指针（包含网格和边界定义）
 
 ## 示例用法
 
@@ -161,8 +161,8 @@ mesh->buildTopology();
 const auto& edges = mesh->getEdges();
 const auto& faces = mesh->getFaces();
 
-// 创建规则网格
-auto uniform_mesh = FEM::Mesh::create_uniform_2d_mesh(1.0, 1.0, 10, 10);
+// 创建规则网格（现在返回Geometry对象）
+auto geometry = FEM::Mesh::create_uniform_2d_mesh(1.0, 1.0, 10, 10);
 // 规则网格会自动构建拓扑结构
 ```
 
@@ -178,4 +178,6 @@ auto uniform_mesh = FEM::Mesh::create_uniform_2d_mesh(1.0, 1.0, 10, 10);
 
 - [Node](Node.md) - 节点类
 - [Element](Element.md) - 单元类
+- [Geometry](Geometry.md) - 几何类
+- [BoundaryDefinition](BoundaryDefinition.md) - 边界定义类
 - STL - 向量、智能指针等标准库组件

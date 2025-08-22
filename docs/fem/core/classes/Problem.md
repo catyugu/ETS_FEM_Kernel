@@ -2,9 +2,9 @@
 
 ## 描述
 
-`Problem` 类是有限元问题的主控制器类，负责协调整个求解过程。它管理网格、物理场、自由度、全局矩阵和向量，并提供组装、施加边界条件、求解和输出结果的接口。这是一个模板类，模板参数表示问题的维度。
+`Problem` 类是有限元问题的主控制器类，负责协调整个求解过程。它管理几何对象、物理场、自由度、全局矩阵和向量，并提供组装、施加边界条件、求解和输出结果的接口。这是一个模板类，模板参数表示问题的维度。
 
-与之前版本相比，该类现在支持多物理场耦合，可以同时处理多个物理场问题。此外，我们对矩阵组装过程进行了性能优化，使用Triplet列表来提高组装效率。
+与之前版本相比，该类现在支持多物理场耦合，可以同时处理多个物理场问题。此外，我们对矩阵组装过程进行了性能优化，使用Triplet列表来提高组装效率。Problem类现在接受Geometry对象而不是Mesh对象。
 
 ## 类定义
 
@@ -19,29 +19,29 @@ class Problem
 
 ## 构造函数
 
-### Problem(std::unique_ptr<Mesh> mesh, std::unique_ptr<PhysicsField<TDim, TScalar>> physics)
+### Problem(std::unique_ptr<Geometry> geometry, std::unique_ptr<PhysicsField<TDim, TScalar>> physics)
 
 构造函数，初始化问题对象。
 
 **参数:**
-- `mesh` - 网格对象的智能指针
+- `geometry` - 几何对象的智能指针（包含网格和边界定义）
 - `physics` - 物理场对象的智能指针（继承自PhysicsField抽象类）
 
-### Problem(std::unique_ptr<Mesh> mesh, std::unique_ptr<PhysicsField<TDim, TScalar>> physics, SolverType solver_type)
+### Problem(std::unique_ptr<Geometry> geometry, std::unique_ptr<PhysicsField<TDim, TScalar>> physics, SolverType solver_type)
 
 构造函数，初始化问题对象并指定求解器类型。
 
 **参数:**
-- `mesh` - 网格对象的智能指针
+- `geometry` - 几何对象的智能指针（包含网格和边界定义）
 - `physics` - 物理场对象的智能指针（继承自PhysicsField抽象类）
 - `solver_type` - 求解器类型（SparseLU或ConjugateGradient）
 
-### Problem(std::unique_ptr<Mesh> mesh, std::vector<std::unique_ptr<PhysicsField<TDim, TScalar>>> physics_fields, SolverType solver_type)
+### Problem(std::unique_ptr<Geometry> geometry, std::vector<std::unique_ptr<PhysicsField<TDim, TScalar>>> physics_fields, SolverType solver_type)
 
 新增构造函数，支持多物理场耦合。
 
 **参数:**
-- `mesh` - 网格对象的智能指针
+- `geometry` - 几何对象的智能指针（包含网格和边界定义）
 - `physics_fields` - 物理场对象的智能指针向量
 - `solver_type` - 求解器类型（SparseLU或ConjugateGradient）
 
@@ -74,6 +74,10 @@ class Problem
 
 获取网格对象的引用。
 
+### const Geometry& getGeometry() const
+
+获取几何对象的引用。
+
 ### const Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& getSolution() const
 
 获取解向量的常量引用。
@@ -102,6 +106,9 @@ class Problem
 ## 示例用法
 
 ```cpp
+// 创建几何对象
+auto geometry = FEM::Mesh::create_uniform_1d_mesh(1.0, 10);
+
 // 创建热传导问题
 auto heat_physics = std::make_unique<FEM::HeatTransfer<2>>();
 heat_physics->addKernel(
@@ -109,11 +116,11 @@ heat_physics->addKernel(
 );
 
 // 使用默认求解器创建单物理场问题
-auto problem = std::make_unique<FEM::Problem<2>>(std::move(mesh), std::move(heat_physics));
+auto problem = std::make_unique<FEM::Problem<2>>(std::move(geometry), std::move(heat_physics));
 
 // 或者指定求解器类型
 auto problem_cg = std::make_unique<FEM::Problem<2>>(
-    std::move(mesh), 
+    std::move(geometry), 
     std::move(heat_physics), 
     FEM::SolverType::ConjugateGradient
 );
@@ -122,4 +129,5 @@ auto problem_cg = std::make_unique<FEM::Problem<2>>(
 std::vector<std::unique_ptr<FEM::PhysicsField<2>>> physics_fields;
 physics_fields.push_back(std::make_unique<FEM::HeatTransfer<2>>());
 physics_fields.push_back(std::make_unique<FEM::Electrostatics<2>>());
-auto multiphysics_problem = std::make_unique<FEM::Problem<2>>(std::move(mesh), std::move(physics_fields));
+auto multiphysics_problem = std::make_unique<FEM::Problem<2>>(std::move(geometry), std::move(physics_fields));
+```

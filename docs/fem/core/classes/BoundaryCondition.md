@@ -35,7 +35,7 @@ protected:
 应用边界条件到全局系统矩阵和载荷向量。与之前版本不同，现在使用Triplet列表而不是直接操作稀疏矩阵，以提高组装效率。
 
 ```cpp
-virtual void apply(const Mesh& mesh, const DofManager& dof_manager,
+virtual void apply(const Geometry& geometry, const DofManager& dof_manager,
                    std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const = 0;
 ```
 
@@ -73,3 +73,4 @@ physics->addBoundaryCondition(std::move(bc));
 - apply方法的实现应根据边界条件类型修改全局矩阵和向量
 - 为了提高性能，现在使用Triplet列表而不是直接操作稀疏矩阵
 - Dirichlet边界条件在apply方法中通常为空实现，因为它们由Problem类统一处理
+- apply方法现在接受Geometry对象而不是Mesh对象
