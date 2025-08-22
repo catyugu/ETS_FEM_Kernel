@@ -1,28 +1,16 @@
 ﻿#pragma once
 
 #include "../core/BoundaryCondition.hpp"
-#include "../core/FEFaceValues.hpp" // 使用 FEFaceValues
+#include "../core/FEFaceValues.hpp"
 #include <complex>
 
 namespace FEM {
     template<int TDim, typename TScalar = double>
     class NeumannBC : public BoundaryCondition<TDim, TScalar> {
     public:
-        /**
-         * @brief 构造一个诺伊曼边界条件 (指定热流密度).
-         * @param boundary_name 边界的名称.
-         * @param value 热流密度的值 (q₀).
-         * @note 遵循行业标准约定:
-         * - value > 0 表示热量流出 (outward flux, 冷却).
-         * - value < 0 表示热量流入 (inward flux, 加热).
-         */
         NeumannBC(const std::string& boundary_name, TScalar value)
             : BoundaryCondition<TDim, TScalar>(boundary_name), value_(value) {}
 
-        /**
-         * @brief 返回边界条件的类型.
-         * @return BCType::NEUMANN
-         */
         BCType getType() const override { return BCType::Neumann; }
 
         void apply(const Mesh& mesh, const DofManager& dof_manager,
@@ -38,7 +26,8 @@ namespace FEM {
                     fe_face_values.reinit(q);
                     auto JxW = static_cast<TScalar>(fe_face_values.JxW());
                     for (size_t i = 0; i < face_element.getNumNodes(); ++i) {
-                        F_elem_bc(i) -= value_ * static_cast<TScalar>(fe_face_values.shape_value(i, q)) * JxW;
+                        // 关键修正：必须是加法。热流是源项。
+                        F_elem_bc(i) += value_ * static_cast<TScalar>(fe_face_values.shape_value(i, q)) * JxW;
                     }
                 }
 
@@ -50,6 +39,6 @@ namespace FEM {
         }
 
     private:
-        TScalar value_; // 热流密度 (q₀)
+        TScalar value_;
     };
 }
