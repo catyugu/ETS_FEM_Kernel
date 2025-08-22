@@ -17,7 +17,7 @@ namespace FEM {
     class IKernel {
     public:
         virtual ~IKernel() = default;
-        virtual void assemble_element(const Element& element, Eigen::SparseMatrix<TScalar>& K_global, const DofManager& dof_manager) = 0;
+        virtual void assemble_element(const Element& element, std::vector<Eigen::Triplet<TScalar>>& triplet_list, const DofManager& dof_manager) = 0;
     };
 
     /**
@@ -29,7 +29,7 @@ namespace FEM {
     public:
         explicit KernelWrapper(std::unique_ptr<Kernel<TDim, TScalar>> kernel) : kernel_(std::move(kernel)) {}
 
-        void assemble_element(const Element& element, Eigen::SparseMatrix<TScalar>& K_global, const DofManager& dof_manager) override {
+        void assemble_element(const Element& element, std::vector<Eigen::Triplet<TScalar>>& triplet_list, const DofManager& dof_manager) override {
             // 计算单元矩阵
             auto K_elem = kernel_->compute_element_matrix(element);
             
@@ -42,10 +42,10 @@ namespace FEM {
                 dof_indices[i] = dof_manager.getNodeDof(element.getNodeId(i), 0);
             }
 
-            // 组装到全局矩阵
+            // 组装到Triplet列表
             for (int i = 0; i < num_nodes; ++i) {
                 for (int j = 0; j < num_nodes; ++j) {
-                    K_global.coeffRef(dof_indices[i], dof_indices[j]) += K_elem(i, j);
+                    triplet_list.emplace_back(dof_indices[i], dof_indices[j], K_elem(i, j));
                 }
             }
         }

@@ -25,6 +25,8 @@ protected:
         // 创建铜材料并设置电导率
         material = std::make_unique<Material>("Copper");
         material->setProperty("permittivity", 5.96e7); // S/m
+        ::Utils::Profiler::instance().setEnabled(true);
+        ::Utils::Profiler::instance().reset();
     }
 
     std::unique_ptr<Material> material;
@@ -34,7 +36,7 @@ TEST_F(TestElectrostatics, SolveElectrostaticsOnImportedMesh) {
 
     {
 
-        ::Utils::Profiler::instance().begin("Input");
+        ::Utils::Profiler::instance().begin("Test::Input");
         std::unique_ptr<Mesh> mesh;
         try {
             mesh = Importer::read_comsol_mphtxt("data/electroOnlyMesh_3D.mphtxt");
@@ -51,11 +53,11 @@ TEST_F(TestElectrostatics, SolveElectrostaticsOnImportedMesh) {
 
         ::Utils::Profiler::instance().end();
 
+        ::Utils::Profiler::instance().begin("Test::SetupPhysics");
         // 创建静电场物理场
         constexpr int dim = 3;
         auto physics = std::make_unique<Electrostatics<dim>>();
 
-        constexpr int num_nodes_per_elem = 4;
         physics->addKernel(
             std::make_unique<ElectrostaticsKernel<dim>>(*material)
         );
@@ -74,7 +76,7 @@ TEST_F(TestElectrostatics, SolveElectrostaticsOnImportedMesh) {
             max_x = std::max(max_x, coords[0]);
         }
 
-        double tolerance = 1e-7; // 使用相对容差
+        double tolerance = 1e-8; // 使用相对容差
 
         std::cout << "X range: [" << min_x << ", " << max_x << "], tolerance: " << tolerance << std::endl;
 
@@ -120,10 +122,13 @@ TEST_F(TestElectrostatics, SolveElectrostaticsOnImportedMesh) {
         // 创建问题实例
         auto problem = std::make_unique<Problem<dim>>(std::move(mesh), std::move(physics), SolverType::SparseLU);
 
+        ::Utils::Profiler::instance().end();
         // 组装和求解
         EXPECT_NO_THROW(problem->assemble()) << "Assembly should not throw";
         EXPECT_NO_THROW(problem->solve()) << "Solving should not throw";
 
+
+        ::Utils::Profiler::instance().begin("Test::PostProcessing");
         // 读取参考数据 - 直接读取电势数据
         std::vector<double> ref_potential_data;
         std::unique_ptr<Mesh> ref_mesh;
@@ -157,7 +162,6 @@ TEST_F(TestElectrostatics, SolveElectrostaticsOnImportedMesh) {
 
         // 为每个参考节点找到对应的计算节点并比较结果
         for (size_t i = 0; i < reference_nodes.size(); ++i) {
-            PROFILE_SCOPE("FindClosestNode");
             const auto& ref_coords = reference_nodes[i]->getCoords();
             // 在计算网格中找到最接近的节点
             int matched_index = findClosestNode(problem_nodes, ref_coords);
@@ -208,6 +212,8 @@ TEST_F(TestElectrostatics, SolveElectrostaticsOnImportedMesh) {
         // 确保大部分节点都有有效解
         EXPECT_GT(matched_count, reference_nodes.size() * 0.95)
             << "Less than 95% of reference nodes were matched";
+
+        ::Utils::Profiler::instance().end();
     }
     //  打印Profiler分析报告
     std::cout<<::Utils::Profiler::instance().getReport();

@@ -33,3 +33,13 @@ inline int findClosestNode(const std::vector<std::unique_ptr<FEM::Node>>& nodes,
 
     return -1; // 没有找到足够接近的节点
 }
+inline void ASSERT_MATRIX_NEAR(const Eigen::MatrixXd& actual, const Eigen::MatrixXd& expected, double tolerance) {
+    ASSERT_EQ(actual.rows(), expected.rows());
+    ASSERT_EQ(actual.cols(), expected.cols());
+    for (int i = 0; i < actual.rows(); ++i) {
+        for (int j = 0; j < actual.cols(); ++j) {
+            ASSERT_NEAR(actual(i, j), expected(i, j), tolerance)
+                << "Mismatch at (" << i << ", " << j << ")";
+        }
+    }
+}

@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <memory>
 #include <iostream>
+#include <cmath>
 #include "fem/core/Problem.hpp"
 #include "fem/physics/Electrostatics.hpp"
 #include "fem/kernels/ElectrostaticsKernel.hpp"
@@ -32,8 +33,14 @@ void test_electrostatics() {
     problem->solve();
 
     const auto& solution = problem->getSolution();
-    // 对于线性分布，中间节点的电势应该是两端的平均值
-    ASSERT_NEAR(solution(5), 5.0, 1e-9);
+    const auto& nodes = problem->getMesh().getNodes();
+    
+    // 对于线性分布，每个节点的电势应该是线性分布的解析解
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        double x = nodes[i]->getX();
+        double expected_potential = 10.0 * (1.0 - x); // 线性分布: 10*(1-x)
+        ASSERT_NEAR(solution(i), expected_potential, 1e-9) << "Mismatch at node " << i << " with x=" << x;
+    }
     // FEM::IO::Exporter::write_vtk("electrostatics_1d_results.vtk", *problem);
 }
 
@@ -81,9 +88,15 @@ TEST_F(ElectrostaticsTest, Solves2DProblem) {
     problem->solve();
 
     const auto& solution = problem->getSolution();
-    // 在2D情况下，检查几个关键点的解
-    ASSERT_NEAR(solution(0), 10.0, 1e-9);
-    ASSERT_NEAR(solution(10), 0.0, 1e-9);
+    const auto& nodes = problem->getMesh().getNodes();
+    
+    // 在2D情况下，检查每个节点的解是否符合线性分布
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        double x = nodes[i]->getX();
+        double expected_potential = 10.0 * (1.0 - x); // 线性分布: 10*(1-x)
+        ASSERT_NEAR(solution(i), expected_potential, 1e-9) 
+            << "Mismatch at node " << i << " with x=" << x;
+    }
     // FEM::IO::Exporter::write_vtk("electrostatics_2d_results.vtk", *problem);
 }
 
@@ -117,8 +130,14 @@ TEST_F(ElectrostaticsTest, Solves3DProblem) {
     problem->solve();
 
     const auto& solution = problem->getSolution();
-    // 在3D情况下，检查几个关键点的解
-    ASSERT_NEAR(solution(0), 10.0, 1e-9);
-    ASSERT_NEAR(solution(5), 0.0, 1e-9);
+    const auto& nodes = problem->getMesh().getNodes();
+    
+    // 在3D情况下，检查每个节点的解是否符合线性分布
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        double x = nodes[i]->getX();
+        double expected_potential = 10.0 * (1.0 - x); // 线性分布: 10*(1-x)
+        ASSERT_NEAR(solution(i), expected_potential, 1e-9) 
+            << "Mismatch at node " << i << " with x=" << x;
+    }
     // FEM::IO::Exporter::write_vtk("electrostatics_3d_results.vtk", *problem);
 }

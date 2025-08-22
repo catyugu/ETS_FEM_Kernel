@@ -1,82 +1,100 @@
-# 文档索引
+# 文档摘要
 
-## 简介
+## 项目概述
 
-这是一个电热耦合有限元仿真内核，支持多物理场、多材料、多边界条件下的复杂仿真。
+ETS_FEM_Kernel 是一个有限元方法（FEM）计算内核的 C++ 实现，用于求解工程和物理问题，如热传导和静电场问题。项目采用模块化设计，支持多物理场耦合和可扩展的架构。
 
-## 目录
+## 主要模块
 
-- [首页](README.md)
+### 核心模块 (fem/core)
 
-### 核心模块
+核心模块包含有限元方法的核心组件，包括Problem类、DofManager类、边界条件处理、线性求解器接口等。这些组件协同工作，提供有限元问题的完整求解流程。
 
-- [fem](fem/README.md)
-  - [core](fem/core/README.md)
-    - [AnalysisTypes](fem/core/classes/AnalysisTypes.md)
-    - [BoundaryCondition](fem/core/classes/BoundaryCondition.md)
-    - [DofManager](fem/core/classes/DofManager.md)
-    - [FEFaceValues](fem/core/classes/FEFaceValues.md)
-    - [FEValues](fem/core/classes/FEValues.md)
-    - [FiniteElement](fem/core/classes/FiniteElement.md)
-    - [LinearSolver](fem/core/classes/LinearSolver.md)
-    - [Problem](fem/core/classes/Problem.md)
-    - [ReferenceElement](fem/core/classes/ReferenceElement.md)
-  - [mesh](fem/mesh/README.md)
-    - [Mesh](fem/mesh/classes/Mesh.md)
-    - [Node](fem/mesh/classes/Node.md)
-    - [Element](fem/mesh/classes/Element.md)
-  - [bcs](fem/bcs/README.md)
-    - [DirichletBC](fem/bcs/classes/DirichletBC.md)
-    - [NeumannBC](fem/bcs/classes/NeumannBC.md)
-    - [CauchyBC](fem/bcs/classes/CauchyBC.md)
-  - [io](fem/io/README.md)
-    - [Exporter](fem/io/classes/Exporter.md)
-    - [Importer](fem/io/classes/Importer.md)
-  - [kernels](fem/kernels/README.md)
-    - [Kernel](fem/kernels/classes/Kernel.md)
-    - [KernelWrappers](fem/kernels/classes/KernelWrappers.md)
-    - [ElectrostaticsKernel](fem/kernels/classes/ElectrostaticsKernel.md)
-    - [HeatDiffusionKernel](fem/kernels/classes/HeatDiffusionKernel.md)
-    - [HeatCapacityKernel](fem/kernels/classes/HeatCapacityKernel.md)
-  - [materials](fem/materials/README.md)
-    - [Material](fem/materials/classes/Material.md)
-    - [MaterialProperty](fem/materials/classes/MaterialProperty.md)
-  - [physics](fem/physics/README.md)
-    - [PhysicsField](fem/physics/classes/PhysicsField.md)
-    - [Electrostatics](fem/physics/classes/Electrostatics.md)
-    - [HeatTransfer](fem/physics/classes/HeatTransfer.md)
+- [Problem](fem/core/classes/Problem.md) - 有限元问题主控制器类，协调整个求解过程
+- [DofManager](fem/core/classes/DofManager.md) - 自由度管理器，处理节点、边、面和体自由度
+- [BoundaryCondition](fem/core/classes/BoundaryCondition.md) - 边界条件抽象基类
+- [LinearSolver](fem/core/classes/LinearSolver.md) - 线性求解器接口
+- [FEValues](fem/core/classes/FEValues.md) - 有限元值计算类
+- [ReferenceElement](fem/core/classes/ReferenceElement.md) - 参考单元类
 
-### 工具模块
+**性能优化**: 
+1. Problem类的assemble方法现在使用Triplet列表而不是直接操作稀疏矩阵，以提高组装效率。
+2. 引入了ReferenceElement类来缓存参考单元上的形函数值、导数以及积分点信息，避免重复计算。
 
-- [utils](utils/README.md)
-  - [InterpolationUtilities](utils/classes/InterpolationUtilities.md)
-  - [Profiler](utils/classes/Profiler.md)
-  - [Quadrature](utils/classes/Quadrature.md)
-  - [ShapeFunctions](utils/classes/ShapeFunctions.md)
-  - [SimpleLogger](utils/classes/SimpleLogger.md)
+### 网格模块 (fem/mesh)
 
-## 更新日志
+网格模块负责处理有限元网格，包括节点、单元的定义与操作。
 
-### 重大更新 - 泛型设计重构
+- [Node](fem/mesh/classes/Node.md) - 网格节点类
+- [Element](fem/mesh/classes/Element.md) - 网格单元类
+- [Mesh](fem/mesh/classes/Mesh.md) - 网格类，管理节点和单元集合
 
-1. **Kernel 类重构**
-   - 移除了模板参数中的 `TNumNodes_`
-   - 使用动态大小矩阵替代固定大小矩阵
-   - 支持任意节点数的单元
+### 物理场模块 (fem/physics)
 
-2. **具体 Kernel 实现更新**
-   - [HeatDiffusionKernel](fem/kernels/classes/HeatDiffusionKernel.md)、[HeatCapacityKernel](fem/kernels/classes/HeatCapacityKernel.md) 和 [ElectrostaticsKernel](fem/kernels/classes/ElectrostaticsKernel.md) 移除了 `TNumNodes` 模板参数
-   - 支持运行时确定单元节点数
-   - 矩阵大小和循环边界动态化
+物理场模块定义了各种物理问题的抽象接口和具体实现。
 
-3. **PhysicsField 类更新**
-   - [HeatTransfer](fem/physics/classes/HeatTransfer.md) 和 [Electrostatics](fem/physics/classes/Electrostatics.md) 类实现了单元类型过滤机制
-   - 添加了 `shouldAssembleElement` 方法，确保只有适当类型的单元参与域内组装
-   - 移除了硬编码的节点数
+- [PhysicsField](fem/physics/classes/PhysicsField.md) - 物理场抽象基类
+- HeatTransfer - 热传导物理场
+- Electrostatics - 静电场物理场
 
-4. **混合网格支持**
-   - 内核现在可以处理混合网格，即同时包含不同类型和节点数的单元
-   - 根据问题维度自动过滤参与组装的单元类型
-   - 提高了代码的通用性和可扩展性
+**性能优化**: PhysicsField类的assemble_volume和applyNaturalBCs方法现在使用Triplet列表而不是直接操作稀疏矩阵，以提高组装效率。
 
-这些更改使有限元内核更加通用，能够处理不同类型的单元（混合网格），而不仅限于特定节点数的单元，符合项目的设计目标。
+### 边界条件模块 (fem/bcs)
+
+边界条件模块提供了各种类型的边界条件实现。
+
+- [DirichletBC](fem/bcs/classes/DirichletBC.md) - Dirichlet边界条件（本质边界条件）
+- [NeumannBC](fem/bcs/classes/NeumannBC.md) - Neumann边界条件（自然边界条件）
+- [CauchyBC](fem/bcs/classes/CauchyBC.md) - Cauchy边界条件（Robin边界条件）
+
+**性能优化**: 所有边界条件的apply方法现在使用Triplet列表而不是直接操作稀疏矩阵，以提高组装效率。
+
+### 材料模块 (fem/materials)
+
+材料模块负责定义和管理材料属性。
+
+- [Material](fem/materials/classes/Material.md) - 材料基类
+- [MaterialProperty](fem/materials/classes/MaterialProperty.md) - 材料属性类
+
+### 内核模块 (fem/kernels)
+
+内核模块包含具体的物理计算内核。
+
+- [Kernel](fem/kernels/classes/Kernel.md) - 内核抽象基类
+- HeatDiffusionKernel - 热扩散内核
+- ElectrostaticsKernel - 静电内核
+
+### 输入输出模块 (fem/io)
+
+输入输出模块负责网格和结果的导入导出。
+
+- [Importer](fem/io/classes/Importer.md) - 数据导入器
+- [Exporter](fem/io/classes/Exporter.md) - 数据导出器
+
+### 工具模块 (utils)
+
+工具模块包含辅助功能，如形函数、积分规则、日志等。
+
+- [ShapeFunctions](utils/classes/ShapeFunctions.md) - 形函数类
+- [Quadrature](utils/classes/Quadrature.md) - 积分规则类
+- [SimpleLogger](utils/classes/SimpleLogger.md) - 简单日志类
+
+## 性能优化
+
+最近我们对整个代码库进行了重要的性能优化。主要改进包括：
+
+1. 使用Triplet列表而不是直接操作稀疏矩阵来提高组装效率
+2. 避免在组装过程中频繁访问和修改稀疏矩阵
+3. 引入ReferenceElement类来缓存参考单元上的形函数值、导数以及积分点信息，避免重复计算
+4. 这些优化显著提高了大规模问题的求解性能
+
+## 多物理场支持
+
+项目支持多物理场耦合，可以通过Problem类同时处理多个物理场问题。
+
+## 技术栈
+
+- C++17
+- Eigen 3.4.0 (内嵌)
+- GoogleTest v1.14.0 (测试框架)
+- CMake 3.16+ (构建系统)

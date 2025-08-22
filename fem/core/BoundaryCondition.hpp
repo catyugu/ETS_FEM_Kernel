@@ -25,7 +25,7 @@ namespace FEM {
         // 应用边界条件。对于Neumann和Cauchy，此方法会修改K和F。
         // 对于Dirichlet，此方法为空，因为它的应用逻辑是特殊的。
         virtual void apply(const Mesh& mesh, const DofManager& dof_manager,
-                           Eigen::SparseMatrix<TScalar>& K_global, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const = 0;
+                           std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const = 0;
                            
         virtual BCType getType() const = 0;
         

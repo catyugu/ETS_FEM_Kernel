@@ -6,7 +6,6 @@
 #include "../utils/Quadrature.hpp"
 #include "../utils/ShapeFunctions.hpp"
 #include "../mesh/Element.hpp"
-#include "FiniteElement.hpp"
 
 namespace FEM {
     // 预计算并缓存的数据结构体
@@ -62,6 +61,10 @@ namespace FEM {
                 } else if (type == ElementType::Hexahedron) {
                     Utils::ShapeFunctions::getHexShapeFunctions(order, qp.point(0), qp.point(1), qp.point(2), N);
                     Utils::ShapeFunctions::getHexShapeFunctionDerivatives(order, qp.point(0), qp.point(1), qp.point(2), dN_dxi);
+                } else if (type == ElementType::Point) {
+                    N.resize(1);
+                    N << 1.0;
+                    dN_dxi.resize(0, 1); // 0维导数
                 }
                 data.N_values.push_back(N);
                 data.dN_dxi_values.push_back(dN_dxi);

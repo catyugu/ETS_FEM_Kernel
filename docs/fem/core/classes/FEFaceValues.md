@@ -12,6 +12,8 @@ class FEFaceValues
 
 `FEFaceValues`类专为边界面上的数值积分设计，提供形函数值、导数和雅可比信息的计算功能。它扩展了FEValues类的功能，专门处理边界条件计算中的面积分。
 
+该类通过使用 [ReferenceElement](ReferenceElement.md) 类来处理形函数和积分规则，通过缓存机制避免重复计算，提高了代码的性能。
+
 ## 构造函数
 
 ```cpp
@@ -91,3 +93,4 @@ for (size_t q = 0; q < fe_face_values.n_quad_points(); ++q) {
 - 该类专为边界条件计算设计
 - 需要与边界单元配合使用
 - 形函数和导数的计算考虑了边界单元的几何特性
+- 通过 [ReferenceElement](ReferenceElement.md) 类利用缓存机制提高性能

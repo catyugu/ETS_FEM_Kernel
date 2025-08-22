@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <memory>
 #include <iostream>
+#include <cmath>
 #include "fem/core/Problem.hpp"
 #include "fem/physics/HeatTransfer.hpp"
 #include "fem/kernels/HeatDiffusionKernel.hpp"
@@ -33,7 +34,14 @@ void test_heat_transfer() {
     problem->solve();
 
     const auto& solution = problem->getSolution();
-    ASSERT_NEAR(solution(5), 50.0, 1e-9);
+    const auto& nodes = problem->getMesh().getNodes();
+    
+    // 检查每个节点的温度是否符合线性分布
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        double x = nodes[i]->getX();
+        double expected_temperature = 100.0 * (1.0 - x); // 线性分布: 100*(1-x)
+        ASSERT_NEAR(solution(i), expected_temperature, 1e-9) << "Mismatch at node " << i << " with x=" << x;
+    }
     // FEM::IO::Exporter::write_vtk("heat_1d_results.vtk", *problem);
 }
 
@@ -81,9 +89,15 @@ TEST_F(HeatTransferTest, Solves2DProblem) {
     problem->solve();
 
     const auto& solution = problem->getSolution();
-    // 在2D情况下，检查几个关键点的解
-    ASSERT_NEAR(solution(0), 100.0, 1e-9);
-    ASSERT_NEAR(solution(10), 0.0, 1e-9);
+    const auto& nodes = problem->getMesh().getNodes();
+    
+    // 在2D情况下，检查每个节点的解是否符合线性分布
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        double x = nodes[i]->getX();
+        double expected_temperature = 100.0 * (1.0 - x); // 线性分布: 100*(1-x)
+        ASSERT_NEAR(solution(i), expected_temperature, 1e-9) 
+            << "Mismatch at node " << i << " with x=" << x;
+    }
     // FEM::IO::Exporter::write_vtk("heat_2d_results.vtk", *problem);
 }
 
@@ -117,8 +131,14 @@ TEST_F(HeatTransferTest, Solves3DProblem) {
     problem->solve();
 
     const auto& solution = problem->getSolution();
-    // 在3D情况下，检查几个关键点的解
-    ASSERT_NEAR(solution(0), 100.0, 1e-9);
-    ASSERT_NEAR(solution(5), 0.0, 1e-9);
+    const auto& nodes = problem->getMesh().getNodes();
+    
+    // 在3D情况下，检查每个节点的解是否符合线性分布
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        double x = nodes[i]->getX();
+        double expected_temperature = 100.0 * (1.0 - x); // 线性分布: 100*(1-x)
+        ASSERT_NEAR(solution(i), expected_temperature, 1e-9) 
+            << "Mismatch at node " << i << " with x=" << x;
+    }
     // FEM::IO::Exporter::write_vtk("heat_3d_results.vtk", *problem);
 }

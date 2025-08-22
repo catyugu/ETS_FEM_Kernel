@@ -12,7 +12,7 @@ namespace FEM {
 
         // 留空，由 Problem 类统一处理
         void apply(const Mesh& mesh, const DofManager& dof_manager,
-                   Eigen::SparseMatrix<TScalar>& K_global, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const override {}
+                   std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const override {}
         
         BCType getType() const override { return BCType::Dirichlet; }
 
