@@ -22,18 +22,16 @@ namespace FEM {
             FEValues fe_values(element, AnalysisType::SCALAR_DIFFUSION);
             const MaterialProperty& k_prop = mat_.getProperty("thermal_conductivity");
 
-            for (size_t q = 0; q < fe_values.n_quad_points(); ++q) {
-                fe_values.reinit(q);
-
+            for (const auto& q_point : fe_values) {
                 double k = k_prop.evaluate();
 
                 // --- 正确的实现 ---
                 // 内核(Kernel)现在负责从FEValues获取梯度dN_dx，并将其用作B矩阵
-                const auto& B = fe_values.dN_dx();
+                const auto& B = q_point.dN_dx();
                 auto D = static_cast<TScalar>(k); // 材料本构关系 (对于热传导是标量)
 
                 // --- 通用形式： K_elem += B^T * D * B * dV ---
-                K_elem += (B.transpose() * D * B) * static_cast<TScalar>(fe_values.JxW());
+                K_elem += (B.transpose() * D * B) * static_cast<TScalar>(q_point.JxW());
             }
             return K_elem;
         }

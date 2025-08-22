@@ -98,3 +98,52 @@ ETS_FEM_Kernel 是一个有限元方法（FEM）计算内核的 C++ 实现，用
 - Eigen 3.4.0 (内嵌)
 - GoogleTest v1.14.0 (测试框架)
 - CMake 3.16+ (构建系统)
+
+# 文档索引
+
+## 核心命名空间
+
+- [FEM](fem/README.md) - 有限元方法核心命名空间
+
+### FEM 子命名空间
+
+- [Core](fem/core/README.md) - 核心有限元功能
+  - [AnalysisTypes](fem/core/classes/AnalysisTypes.md) - 分析类型枚举
+  - [BoundaryCondition](fem/core/classes/BoundaryCondition.md) - 边界条件抽象基类
+  - [DofManager](fem/core/classes/DofManager.md) - 自由度管理器
+  - [FEValues](fem/core/classes/FEValues.md) - 有限元值计算类
+  - [LinearSolver](fem/core/classes/LinearSolver.md) - 线性求解器接口
+  - [Problem](fem/core/classes/Problem.md) - 有限元问题主控制器类
+  - [ReferenceElement](fem/core/classes/ReferenceElement.md) - 参考单元类
+  - [QuadraturePoint](fem/core/classes/QuadraturePoint.md) - 积分点类
+- [IO](fem/io/README.md) - 输入输出功能
+  - [Exporter](fem/io/classes/Exporter.md) - 数据导出器
+  - [Importer](fem/io/classes/Importer.md) - 数据导入器
+
+- [Kernels](fem/kernels/README.md) - 物理内核实现
+  - [Kernel](fem/kernels/classes/Kernel.md) - 计算核抽象基类
+  - [ElectrostaticsKernel](fem/kernels/classes/ElectrostaticsKernel.md) - 静电场计算核
+  - [HeatDiffusionKernel](fem/kernels/classes/HeatDiffusionKernel.md) - 热传导计算核
+
+- [Materials](fem/materials/README.md) - 材料属性定义
+  - [Material](fem/materials/classes/Material.md) - 材料类
+  - [MaterialProperty](fem/materials/classes/MaterialProperty.md) - 材料属性类
+
+- [Mesh](fem/mesh/README.md) - 网格数据结构
+  - [Edge](fem/mesh/classes/Mesh.md#Edge) - 网格边结构
+  - [Face](fem/mesh/classes/Mesh.md#Face) - 网格面结构
+  - [Mesh](fem/mesh/classes/Mesh.md) - 网格类
+  - [Geometry](fem/mesh/classes/Geometry.md) - 几何类
+  - [BoundaryDefinition](fem/mesh/classes/BoundaryDefinition.md) - 边界定义类
+  - [Node](fem/mesh/classes/Node.md) - 节点类
+  - [Element](fem/mesh/classes/Element.md) - 单元类
+
+- [Physics](fem/physics/README.md) - 物理场实现
+  - [PhysicsField](fem/physics/classes/PhysicsField.md) - 物理场抽象基类
+  - [Electrostatics](fem/physics/classes/Electrostatics.md) - 静电场物理场
+  - [HeatTransfer](fem/physics/classes/HeatTransfer.md) - 热传导物理场
+
+- [BCs](fem/bcs/README.md) - 边界条件实现
+  - [CauchyBC](fem/bcs/classes/CauchyBC.md) - Cauchy边界条件
+  - [DirichletBC](fem/bcs/classes/DirichletBC.md) - Dirichlet边界条件
+  - [NeumannBC](fem/bcs/classes/NeumannBC.md) - Neumann边界条件

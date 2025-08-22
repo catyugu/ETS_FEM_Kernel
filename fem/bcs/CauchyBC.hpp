@@ -1,7 +1,8 @@
 #pragma once
 
 #include "../core/BoundaryCondition.hpp"
-#include "../core/FEFaceValues.hpp"
+#include "../mesh/Geometry.hpp"
+#include "../core/FEValues.hpp"
 #include <complex>
 
 namespace FEM {
@@ -11,33 +12,34 @@ namespace FEM {
         CauchyBC(const std::string& boundary_name, TScalar h_val, TScalar T_inf_val)
             : BoundaryCondition<TDim, TScalar>(boundary_name), h_(h_val), T_inf_(T_inf_val) {}
 
-        void apply(const Mesh& mesh, const DofManager& dof_manager,
+        BCType getType() const override { return BCType::Cauchy; }
+
+        void apply(const Geometry& geometry, const DofManager& dof_manager,
                    std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const override {
-            
-            const auto& boundary_elements = mesh.getBoundaryElements(this->boundary_name_);
+
+            const auto& boundary_elements = geometry.getBoundary(this->boundary_name_).getElements();
 
             for (const auto& elem_ptr : boundary_elements) {
                 const Element& face_element = *elem_ptr;
-                FEFaceValues fe_face_values(face_element, 1, AnalysisType::SCALAR_DIFFUSION);
+                FEValues fe_values(face_element, 1, AnalysisType::SCALAR_DIFFUSION);
 
                 Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> K_elem_bc = Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic>::Zero(face_element.getNumNodes(), face_element.getNumNodes());
                 Eigen::Matrix<TScalar, Eigen::Dynamic, 1> F_elem_bc = Eigen::Matrix<TScalar, Eigen::Dynamic, 1>::Zero(face_element.getNumNodes());
 
-                for (size_t q = 0; q < fe_face_values.n_quad_points(); ++q) {
-                    fe_face_values.reinit(q);
-                    TScalar JxW = static_cast<TScalar>(fe_face_values.JxW());
-                    
+                size_t q_index = 0;
+                for (const auto& q_point : fe_values) {
+                    auto JxW = static_cast<TScalar>(q_point.JxW());
+
                     for (size_t i = 0; i < face_element.getNumNodes(); ++i) {
                         for (size_t j = 0; j < face_element.getNumNodes(); ++j) {
-                            // Cauchy BC: h * ∫(N_i * N_j) dS
-                            K_elem_bc(i, j) += h_ * static_cast<TScalar>(fe_face_values.shape_value(i, q) * fe_face_values.shape_value(j, q)) * JxW;
+                            K_elem_bc(i, j) += h_ * static_cast<TScalar>(fe_values.shape_value(i, q_index) * fe_values.shape_value(j, q_index)) * JxW;
                         }
-                        // Cauchy BC: h * T_inf * ∫(N_i) dS
-                        F_elem_bc(i) += h_ * T_inf_ * static_cast<TScalar>(fe_face_values.shape_value(i, q)) * JxW;
+                        // 关键修正：必须是加法。环境温度是源项。
+                        F_elem_bc(i) += h_ * T_inf_ * static_cast<TScalar>(fe_values.shape_value(i, q_index)) * JxW;
                     }
+                    ++q_index;
                 }
 
-                // 将局部矩阵和向量映射到全局系统
                 for (size_t i = 0; i < face_element.getNumNodes(); ++i) {
                     int global_i = dof_manager.getNodeDof(face_element.getNodeId(i), 0);
                     F_global(global_i) += F_elem_bc(i);
@@ -48,14 +50,9 @@ namespace FEM {
                 }
             }
         }
-        
-        BCType getType() const override { return BCType::Cauchy; }
-
-        TScalar getH() const { return h_; }
-        TScalar getTInf() const { return T_inf_; }
 
     private:
-        TScalar h_;      // 传热系数
-        TScalar T_inf_;  // 环境温度
+        TScalar h_;
+        TScalar T_inf_;
     };
 }

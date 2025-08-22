@@ -103,7 +103,7 @@ public:
 
 ## 实现细节
 
-`SimpleLogger` 采用单例模式设计，通过静态函数 [instance()](file:///E:/code/cpp/ETS_FEM_Kernel/utils/SimpleLogger.hpp#L41-L44) 获取唯一实例。使用 `std::mutex` 保证线程安全，支持同时从多个线程记录日志。
+`SimpleLogger` 采用单例模式设计，通过静态函数 `instance()` 获取唯一实例。使用 `std::mutex` 保证线程安全，支持同时从多个线程记录日志。
 
 日志消息通过可变参数模板函数实现，可以接受任意数量和类型的参数。时间戳使用 `std::chrono` 获取，并以 "YYYY-MM-DD HH:MM:SS" 格式显示。
 

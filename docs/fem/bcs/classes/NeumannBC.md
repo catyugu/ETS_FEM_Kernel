@@ -15,7 +15,9 @@ class NeumannBC : public BoundaryCondition<TDim, TScalar>
 
 ## 概述
 
-`NeumannBC`类实现Neumann边界条件，也称为自然边界条件。它用于指定边界上的法向通量或梯度，如热流密度、电场法向分量等。
+`NeumannBC` 类实现 Neumann 边界条件，用于指定边界上的法向通量（如热流密度、电通量密度等）。该类通过在边界面上进行数值积分来计算边界条件对系统矩阵和右端向量的贡献。
+
+该类使用 [FEValues](../../core/classes/FEValues.md) 类来计算面单元上的形函数值和几何信息，并通过现代C++迭代器接口遍历积分点。
 
 ## 构造函数
 
@@ -32,12 +34,19 @@ NeumannBC(const std::string& boundary_name, TScalar value)
 
 ### apply
 
-应用Neumann边界条件。
+应用Neumann边界条件到系统矩阵和右端向量。
 
 ```cpp
-void apply(const Mesh& mesh, const DofManager& dof_manager,
-           std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const override;
+void apply(const Geometry& geometry, const DofManager& dof_manager,
+           std::vector<Eigen::Triplet<TScalar>>& triplet_list, 
+           Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const override
 ```
+
+**参数:**
+- `geometry` - 几何对象，包含网格和边界定义
+- `dof_manager` - 自由度管理器
+- `triplet_list` - 稀疏矩阵的Triplet列表
+- `F_global` - 全局右端向量
 
 ### getValue
 
@@ -73,10 +82,19 @@ heat_physics->addBoundaryCondition(std::move(heat_flux_bc));
 electrostatics_physics->addBoundaryCondition(std::move(electric_flux_bc));
 ```
 
+## 实现细节
+
+在 `apply` 方法中，该类执行以下步骤：
+
+1. 获取指定边界上的所有面单元
+2. 对每个面单元创建 [FEValues](../../core/classes/FEValues.md) 对象
+3. 使用范围for循环遍历所有积分点：
+   - 获取形函数值和雅可比信息
+   - 计算积分贡献
+4. 将计算结果组装到全局右端向量中
+
 ## 注意事项
 
-- Neumann边界条件直接修改全局载荷向量
-- 边界名称必须与网格中的边界标识符匹配
-- 值的单位取决于具体物理场类型
-- 该实现使用FEFaceValues进行边界积分计算
-- 为了提高性能，现在使用Triplet列表而不是直接操作稀疏矩阵
+- Neumann边界条件是对边界条件的自然弱形式实现，直接贡献到右端向量中
+- 该类使用 [FEValues](../../core/classes/FEValues.md) 的现代迭代器接口，避免了手动管理积分点状态
+- 边界条件的值应根据具体物理问题确定单位和符号

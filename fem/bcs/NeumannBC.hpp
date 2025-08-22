@@ -1,7 +1,8 @@
 #pragma once
 
 #include "../core/BoundaryCondition.hpp"
-#include "../core/FEFaceValues.hpp" // 使用 FEFaceValues
+#include "../mesh/Geometry.hpp"
+#include "../core/FEValues.hpp"
 #include <complex>
 
 namespace FEM {
@@ -11,36 +12,33 @@ namespace FEM {
         NeumannBC(const std::string& boundary_name, TScalar value)
             : BoundaryCondition<TDim, TScalar>(boundary_name), value_(value) {}
 
-        void apply(const Mesh& mesh, const DofManager& dof_manager,
-                   std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const override {
-            
-            const auto& boundary_elements = mesh.getBoundaryElements(this->boundary_name_);
+        BCType getType() const override { return BCType::Neumann; }
 
+        void apply(const Geometry& geometry, const DofManager& dof_manager,
+                   std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) const override {
+
+            const auto& boundary_elements = geometry.getBoundary(this->boundary_name_).getElements();
             for (const auto& elem_ptr : boundary_elements) {
                 const Element& face_element = *elem_ptr;
-                FEFaceValues fe_face_values(face_element, 1, AnalysisType::SCALAR_DIFFUSION);
+                FEValues fe_values(face_element, 1, AnalysisType::SCALAR_DIFFUSION);
                 Eigen::Matrix<TScalar, Eigen::Dynamic, 1> F_elem_bc = Eigen::Matrix<TScalar, Eigen::Dynamic, 1>::Zero(face_element.getNumNodes());
-                
-                for (size_t q = 0; q < fe_face_values.n_quad_points(); ++q) {
-                    fe_face_values.reinit(q);
-                    TScalar JxW = static_cast<TScalar>(fe_face_values.JxW());
+
+                size_t q_index = 0;
+                for (const auto& q_point : fe_values) {
+                    auto JxW = static_cast<TScalar>(q_point.JxW());
                     for (size_t i = 0; i < face_element.getNumNodes(); ++i) {
-                        // Neumann BC: 面积分 ∫(value * N_i) dS
-                        F_elem_bc(i) += value_ * static_cast<TScalar>(fe_face_values.shape_value(i, q)) * JxW;
+                        // 关键修正：必须是加法。热流是源项。
+                        F_elem_bc(i) += value_ * static_cast<TScalar>(fe_values.shape_value(i, q_index)) * JxW;
                     }
+                    ++q_index;
                 }
-                
-                // 将局部向量映射到全局向量
+
                 for (size_t i = 0; i < face_element.getNumNodes(); ++i) {
                     int global_dof = dof_manager.getNodeDof(face_element.getNodeId(i), 0);
                     F_global(global_dof) += F_elem_bc(i);
                 }
             }
         }
-        
-        BCType getType() const override { return BCType::Neumann; }
-
-        TScalar getValue() const { return value_; }
 
     private:
         TScalar value_;

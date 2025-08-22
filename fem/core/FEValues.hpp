@@ -4,10 +4,13 @@
 #include <Eigen/Dense>
 #include "ReferenceElement.hpp"
 #include "AnalysisTypes.hpp"
+#include "QuadraturePoint.hpp" // 引入新头文件
 
 namespace FEM {
     class FEValues {
     public:
+        friend class QuadraturePoint; // 允许 QuadraturePoint 访问其数据
+
         FEValues(const Element& elem, int order, AnalysisType analysis_type)
             : element_(elem),
               ref_data_(ReferenceElement::get(elem.getType(), order)),
@@ -77,19 +80,36 @@ namespace FEM {
             : FEValues(elem, getRecommendedOrder(elem.getType()), analysis_type) {
         }
 
-        void reinit(int q_index) { q_point_index_ = q_index; }
         size_t n_quad_points() const { return ref_data_.q_points.size(); }
 
-        // 访问器现在从 ref_data_ 中获取数据
-        const Eigen::VectorXd& N() const { return ref_data_.N_values[q_point_index_]; }
-        const Eigen::MatrixXd& dN_dx() const { return all_dN_dx_[q_point_index_]; }
-        double JxW() const { return all_JxW_[q_point_index_]; }
+        // --- 迭代器实现 ---
+        class Iterator {
+        public:
+            Iterator(const FEValues& fe_values, size_t q_index)
+                : q_point_(fe_values, q_index) {}
+
+            QuadraturePoint& operator*() { return q_point_; }
+            const QuadraturePoint& operator*() const { return q_point_; }
+            Iterator& operator++() {
+                q_point_.q_index_++;
+                return *this;
+            }
+            bool operator!=(const Iterator& other) const {
+                return q_point_.q_index_ != other.q_point_.q_index_;
+            }
+        private:
+            QuadraturePoint q_point_;
+        };
+
+        Iterator begin() const { return Iterator(*this, 0); }
+        Iterator end() const { return Iterator(*this, n_quad_points()); }
+
+        // 添加shape_value函数以修复CauchyBC中的编译错误
+        double shape_value(size_t i, size_t q) const { return ref_data_.N_values[q](i); }
 
     private:
-        // ... (其他成员变量不变) ...
         const Element& element_;
         const ReferenceElementData& ref_data_;
-        int q_point_index_ = -1;
         AnalysisType analysis_type_; // <--- 新增
 
         std::vector<double> all_JxW_;
@@ -105,8 +125,18 @@ namespace FEM {
                 case ElementType::Quadrilateral: return 1;
                 case ElementType::Tetrahedron: return 1;
                 case ElementType::Hexahedron: return 1;
-                default: throw std::runtime_error("Unsupported element type");
+                default: return 1;
             }
         }
+        
+        // --- 私有访问器，供 QuadraturePoint 使用 ---
+        const Eigen::VectorXd& getN(size_t q_index) const { return ref_data_.N_values[q_index]; }
+        const Eigen::MatrixXd& get_dN_dx(size_t q_index) const { return all_dN_dx_[q_index]; }
+        double get_JxW(size_t q_index) const { return all_JxW_[q_index]; }
     };
+    
+    // --- QuadraturePoint 成员函数的实现 ---
+    inline const Eigen::VectorXd& QuadraturePoint::N() const { return fe_values_.getN(q_index_); }
+    inline const Eigen::MatrixXd& QuadraturePoint::dN_dx() const { return fe_values_.get_dN_dx(q_index_); }
+    inline double QuadraturePoint::JxW() const { return fe_values_.get_JxW(q_index_); }
 }

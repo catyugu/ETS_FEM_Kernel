@@ -1,40 +1,87 @@
-# FEM 核心模块 (fem/core)
+# FEM Core 模块
 
-## 概述
+核心模块包含有限元方法的核心组件，这些组件协同工作，提供有限元问题的完整求解流程。
 
-核心模块包含有限元方法的核心组件，包括Problem类、DofManager类、边界条件处理、线性求解器接口等。这些组件协同工作，提供有限元问题的完整求解流程。
+## 模块组成
 
-## 主要类
+### 主要类
 
 - [Problem](classes/Problem.md) - 有限元问题主控制器类，协调整个求解过程
 - [DofManager](classes/DofManager.md) - 自由度管理器，处理节点、边、面和体自由度
 - [BoundaryCondition](classes/BoundaryCondition.md) - 边界条件抽象基类
 - [LinearSolver](classes/LinearSolver.md) - 线性求解器接口
-- [FEValues](classes/FEValues.md) - 有限元值计算类
+- [FEValues](classes/FEValues.md) - 有限元值计算类（已整合面单元功能）
 - [ReferenceElement](classes/ReferenceElement.md) - 参考单元类
+- [QuadraturePoint](classes/QuadraturePoint.md) - 积分点类（FEValues的内部组件）
+- [AnalysisTypes](classes/AnalysisTypes.md) - 分析类型枚举
 
-## 性能优化
+### 功能特点
 
-最近，我们对核心模块进行了重大性能优化。引入了 [ReferenceElement](classes/ReferenceElement.md) 类来缓存参考单元上的形函数值、导数以及积分点信息。Problem类的assemble方法现在使用Triplet列表而不是直接操作稀疏矩阵，以提高组装效率。这种优化避免了在组装过程中频繁访问和修改稀疏矩阵，从而显著提高了性能。
+1. **统一的有限元值计算接口**：
+   - 使用统一的 [FEValues](classes/FEValues.md) 类处理体单元和面单元
+   - 引入现代C++迭代器接口，支持范围for循环
+   - 提供更安全、更直观的API
 
-## 使用方法
+2. **性能优化**：
+   - 通过 [ReferenceElement](classes/ReferenceElement.md) 类缓存参考单元上的形函数值、导数以及积分点信息，避免重复计算
+   - 使用高效的矩阵运算库Eigen进行数值计算
 
-核心模块通过Problem类协调整个求解过程：
+3. **模块化设计**：
+   - 各个类职责明确，耦合度低
+   - 易于扩展和维护
 
-```cpp
-auto problem = std::make_unique<FEM::Problem<2>>(std::move(mesh), std::move(physics));
-problem->assemble();
-problem->solve();
+### 类关系图
+
+```
+           +----------------+
+           |   Problem      |
+           +----------------+
+                  |
+        +-------------------+
+        |   DofManager      |
+        +-------------------+
+                  |
+        +-------------------+     +---------------------+
+        |  LinearSolver     |<----|  Eigen::SparseMatrix|
+        +-------------------+     +---------------------+
+                  |
+        +-------------------+
+        |   FEValues        |
+        +-------------------+
+           |        |
++-----------------+ +------------------+
+| ReferenceElement| | QuadraturePoint  |
++-----------------+ +------------------+
 ```
 
-## 注意事项
+### 使用示例
 
-1. Problem类是有限元求解的主要接口
-2. DofManager负责管理所有自由度
-3. 为了提高性能，现在使用Triplet列表而不是直接操作稀疏矩阵
-4. 支持多物理场耦合
-5. 通过 [ReferenceElement](classes/ReferenceElement.md) 类利用缓存机制避免重复计算
+```cpp
+// 创建问题对象
+FEM::Problem problem;
 
-## 依赖关系
+// 设置网格和边界条件
+// ...
 
-Core 模块依赖于 mesh 模块和 physics 模块，同时也依赖于第三方库 Eigen。
+// 组装系统矩阵
+problem.assemble();
+
+// 求解
+problem.solve();
+
+// 输出结果
+problem.exportResults("results.vtu");
+```
+
+### 性能优化
+
+1. **避免重复计算**：
+   - 使用 [ReferenceElement](classes/ReferenceElement.md) 缓存机制避免重复计算参考单元信息
+   - 预计算并存储所有积分点的形函数值和导数
+
+2. **高效的数据结构**：
+   - 使用Eigen库进行矩阵运算
+   - 采用Triplet列表方式组装稀疏矩阵，提高组装效率
+
+3. **内存优化**：
+   - 通过 [QuadraturePoint](classes/QuadraturePoint.md) 类提供对积分点数据的引用访问，避免不必要的数据复制

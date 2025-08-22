@@ -40,39 +40,42 @@ class HeatDiffusionKernel : public Kernel<TDim, TScalar>
 ## 示例用法
 
 ```cpp
-// 创建材料属性
+#include "fem/kernels/HeatDiffusionKernel.hpp"
+
+// 创建材料对象并设置热传导系数
 FEM::Material material;
+material.addProperty("thermal_conductivity", 25.0); // W/(m·K)
 
 // 创建热传导内核
-FEM::HeatDiffusionKernel<2> kernel(material);
+auto heat_kernel = std::make_unique<FEM::HeatDiffusionKernel<3, double>>(material);
 
-// 假设有一个单元对象
-FEM::Element& element = ...;
-
-// 计算单元刚度矩阵
-auto element_matrix = kernel.compute_element_matrix(element);
+// 将内核添加到问题中
+problem.addKernel(std::move(heat_kernel));
 ```
 
 ## 实现细节
 
-与之前版本相比，该类的主要变化包括：
+在 `compute_element_matrix` 方法中，该类执行以下步骤：
 
-1. 移除了模板参数中的单元节点数，现在支持任意节点数的单元
-2. 单元矩阵的大小在运行时根据单元的实际节点数确定
-3. 循环边界也根据实际节点数动态确定
+1. 创建 [FEValues](../../core/classes/FEValues.md) 对象以计算单元上的形函数梯度和几何信息
+2. 使用范围for循环遍历所有积分点：
+   - 获取形函数梯度（B矩阵）和雅可比信息
+   - 获取材料属性（热传导系数）
+   - 计算局部传导矩阵贡献：K_elem += B^T * D * B * JxW
+3. 返回累积的单元传导矩阵
 
-这些改进使得内核可以处理混合网格，即同时包含不同类型和节点数的单元。
+数学上，热传导问题的弱形式导致以下单元矩阵计算：
+```
+K_elem = ∫(∇N)^T * k * ∇N dV
+```
 
-该实现使用 [FEValues](../../core/classes/FEValues.md) 类来计算形函数梯度和几何信息，并从材料属性中获取热导率。与之前版本相比，B矩阵的构建现在在该类内部完成，而不是在 [FEValues](../../core/classes/FEValues.md) 类中。核心计算仍然基于以下公式：
+其中 N 是形函数，k 是热传导系数，∇N 是形函数梯度（即B矩阵）。
 
-K_elem += B^T * D * B * dV
+## 注意事项
 
-其中：
-- B 是梯度矩阵（应变-位移矩阵或标量问题的梯度算子），现在由该类负责构建
-- D 是材料属性矩阵（对于热传导问题，是一个标量，即热导率）
-- dV 是体积微元（通过雅可比行列式和积分权重计算）
-
-这种设计使得 [FEValues](../../core/classes/FEValues.md) 类更加通用，可以适用于不同类型的物理问题，而每个Kernel可以根据自己的需要构建相应的B矩阵。
+- 该类使用 [FEValues](../../core/classes/FEValues.md) 的现代迭代器接口，避免了手动管理积分点状态
+- 材料对象必须包含"thermal_conductivity"属性
+- 该内核适用于标量热传导问题
 
 ## 依赖关系
 
