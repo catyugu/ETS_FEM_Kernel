@@ -63,6 +63,8 @@ namespace FEM {
         const Geometry& getGeometry() const { return *geometry_; }
         const Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& getSolution() const { return U_solution_; }
         const DofManager& getDofManager() const { return *dof_manager_; }
+        const Eigen::SparseMatrix<TScalar>& getStiffnessMatrix() const { return K_global_; }
+        const Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& getLoadVector() const { return F_global_; }
 
         const PhysicsField<TDim, TScalar>& getPhysicsField(size_t index = 0) const {
             if (index < physics_fields_.size()) {
@@ -72,6 +74,7 @@ namespace FEM {
         }
 
         size_t getNumPhysicsFields() const { return physics_fields_.size(); }
+
 
     private:
         void initializeSystem() {
