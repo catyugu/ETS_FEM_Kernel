@@ -23,16 +23,27 @@ namespace FEM {
                 Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic> K_elem_bc = Eigen::Matrix<TScalar, Eigen::Dynamic, Eigen::Dynamic>::Zero(face_element.getNumNodes(), face_element.getNumNodes());
                 Eigen::Matrix<TScalar, Eigen::Dynamic, 1> F_elem_bc = Eigen::Matrix<TScalar, Eigen::Dynamic, 1>::Zero(face_element.getNumNodes());
 
+                if constexpr (TDim == 1) {
+                    const auto& boundary_nodes = mesh.getBoundaryNodes(this->getBoundaryName());
+                    for (int node_id : boundary_nodes) {
+                        int dof_index = dof_manager.getNodeDof(node_id, 0);
+
+                        // 对刚度矩阵对角线添加 h
+                        triplet_list.emplace_back(dof_index, dof_index, h_);
+
+                        // 对力向量添加 h * T_inf
+                        F_global(dof_index) += h_ * T_inf_;
+                    }
+                    return;
+                }
                 for (size_t q = 0; q < fe_face_values.n_quad_points(); ++q) {
                     fe_face_values.reinit(q);
                     TScalar JxW = static_cast<TScalar>(fe_face_values.JxW());
                     
                     for (size_t i = 0; i < face_element.getNumNodes(); ++i) {
                         for (size_t j = 0; j < face_element.getNumNodes(); ++j) {
-                            // Cauchy BC: h * ∫(N_i * N_j) dS
                             K_elem_bc(i, j) += h_ * static_cast<TScalar>(fe_face_values.shape_value(i, q) * fe_face_values.shape_value(j, q)) * JxW;
                         }
-                        // Cauchy BC: h * T_inf * ∫(N_i) dS
                         F_elem_bc(i) += h_ * T_inf_ * static_cast<TScalar>(fe_face_values.shape_value(i, q)) * JxW;
                     }
                 }

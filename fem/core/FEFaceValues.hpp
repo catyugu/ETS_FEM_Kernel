@@ -48,6 +48,9 @@ namespace FEM {
         const Eigen::VectorXd& N() const { return ref_data_.N_values[q_point_index_]; }
         const Eigen::MatrixXd& dN_dx() const { return all_dN_dx_[q_point_index_]; }
         double JxW() const { return all_JxW_[q_point_index_]; }
+        
+        // 添加shape_value函数以修复CauchyBC中的编译错误
+        double shape_value(size_t i, size_t q) const { return ref_data_.N_values[q](i); }
 
     private:
         const Element& element_;
