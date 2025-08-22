@@ -10,12 +10,12 @@
 - [DofManager](classes/DofManager.md) - 自由度管理器，处理节点、边、面和体自由度
 - [BoundaryCondition](classes/BoundaryCondition.md) - 边界条件抽象基类
 - [LinearSolver](classes/LinearSolver.md) - 线性求解器接口
-- FEValues - 有限元值计算类
-- ReferenceElement - 参考单元类
+- [FEValues](classes/FEValues.md) - 有限元值计算类
+- [ReferenceElement](classes/ReferenceElement.md) - 参考单元类
 
 ## 性能优化
 
-最近，我们对核心模块进行了性能优化。Problem类的assemble方法现在使用Triplet列表而不是直接操作稀疏矩阵，以提高组装效率。这种优化避免了在组装过程中频繁访问和修改稀疏矩阵，从而显著提高了性能。
+最近，我们对核心模块进行了重大性能优化。引入了 [ReferenceElement](classes/ReferenceElement.md) 类来缓存参考单元上的形函数值、导数以及积分点信息。Problem类的assemble方法现在使用Triplet列表而不是直接操作稀疏矩阵，以提高组装效率。这种优化避免了在组装过程中频繁访问和修改稀疏矩阵，从而显著提高了性能。
 
 ## 使用方法
 
@@ -33,6 +33,7 @@ problem->solve();
 2. DofManager负责管理所有自由度
 3. 为了提高性能，现在使用Triplet列表而不是直接操作稀疏矩阵
 4. 支持多物理场耦合
+5. 通过 [ReferenceElement](classes/ReferenceElement.md) 类利用缓存机制避免重复计算
 
 ## 依赖关系
 

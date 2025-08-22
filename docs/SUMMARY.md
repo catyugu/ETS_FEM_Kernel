@@ -14,8 +14,12 @@ ETS_FEM_Kernel 是一个有限元方法（FEM）计算内核的 C++ 实现，用
 - [DofManager](fem/core/classes/DofManager.md) - 自由度管理器，处理节点、边、面和体自由度
 - [BoundaryCondition](fem/core/classes/BoundaryCondition.md) - 边界条件抽象基类
 - [LinearSolver](fem/core/classes/LinearSolver.md) - 线性求解器接口
+- [FEValues](fem/core/classes/FEValues.md) - 有限元值计算类
+- [ReferenceElement](fem/core/classes/ReferenceElement.md) - 参考单元类
 
-**性能优化**: Problem类的assemble方法现在使用Triplet列表而不是直接操作稀疏矩阵，以提高组装效率。
+**性能优化**: 
+1. Problem类的assemble方法现在使用Triplet列表而不是直接操作稀疏矩阵，以提高组装效率。
+2. 引入了ReferenceElement类来缓存参考单元上的形函数值、导数以及积分点信息，避免重复计算。
 
 ### 网格模块 (fem/mesh)
 
@@ -81,7 +85,8 @@ ETS_FEM_Kernel 是一个有限元方法（FEM）计算内核的 C++ 实现，用
 
 1. 使用Triplet列表而不是直接操作稀疏矩阵来提高组装效率
 2. 避免在组装过程中频繁访问和修改稀疏矩阵
-3. 这种优化显著提高了大规模问题的求解性能
+3. 引入ReferenceElement类来缓存参考单元上的形函数值、导数以及积分点信息，避免重复计算
+4. 这些优化显著提高了大规模问题的求解性能
 
 ## 多物理场支持
 

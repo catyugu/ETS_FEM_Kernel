@@ -6,7 +6,7 @@
 
 该类是有限元计算中的关键组件，它封装了从参考单元到实际单元的变换过程，并提供了访问形状函数值、梯度以及雅可比行列式等信息的接口。
 
-与之前版本相比，该类现在使用 [FiniteElement](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/FiniteElement.hpp#L18-L88) 类来处理形函数和积分规则，提高了代码的模块化和可扩展性。此外，B矩阵的构建已从该类中移出，由各个Kernel负责构建，使该类更加通用。
+与之前版本相比，该类现在使用 [ReferenceElement](ReferenceElement.md) 类来处理形函数和积分规则，通过缓存机制避免重复计算，提高了代码的性能。此外，B矩阵的构建已从该类中移出，由各个Kernel负责构建，使该类更加通用。
 
 ## 类定义
 
@@ -96,11 +96,11 @@ for (size_t q = 0; q < fe_values.n_quad_points(); ++q) {
 - 雅可比矩阵及其行列式
 - 形状函数在实际坐标下的梯度
 
-与之前的实现相比，现在通过 [FiniteElement](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/FiniteElement.hpp#L18-L88) 类获取形函数和积分点信息，而不是直接使用 [ReferenceElement](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/ReferenceElement.hpp#L18-L23)。这种设计使得添加新的单元类型更加容易，只需要扩展 [FiniteElement](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/FiniteElement.hpp#L18-L88) 类即可。此外，B矩阵的构建已从该类中移出，由各个物理Kernel负责构建。这样使得 [FEValues](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/FEValues.hpp#L12-L72) 类更加通用，可以适用于不同类型的物理问题，而不仅仅是标量扩散问题。
+与之前的实现相比，现在通过 [ReferenceElement](ReferenceElement.md) 类获取形函数和积分点信息。这种设计利用了缓存机制，避免了重复计算，提高了性能。此外，B矩阵的构建已从该类中移出，由各个物理Kernel负责构建。这样使得 [FEValues](file:///E:/code/cpp/ETS_FEM_Kernel/fem/core/FEValues.hpp#L12-L72) 类更加通用，可以适用于不同类型的物理问题，而不仅仅是标量扩散问题。
 
 ## 依赖关系
 
 - [Element](../../mesh/classes/Element.md) - 单元类
-- [FiniteElement](FiniteElement.md) - 有限单元类
+- [ReferenceElement](ReferenceElement.md) - 参考单元类
 - [AnalysisType](AnalysisTypes.md) - 分析类型枚举
 - Eigen - 矩阵运算库
