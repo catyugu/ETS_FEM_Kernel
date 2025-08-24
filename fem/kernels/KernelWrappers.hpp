@@ -27,7 +27,8 @@ namespace FEM {
     template<int TDim, typename TScalar = double>
     class KernelWrapper : public IKernel<TDim, TScalar> {
     public:
-        explicit KernelWrapper(std::unique_ptr<Kernel<TDim, TScalar>> kernel) : kernel_(std::move(kernel)) {}
+        KernelWrapper(std::unique_ptr<Kernel<TDim, TScalar>> kernel, const std::string& var_name) 
+            : kernel_(std::move(kernel)), var_name_(var_name) {}
 
         void assemble_element(const Element& element, std::vector<Eigen::Triplet<TScalar>>& triplet_list, const DofManager& dof_manager) override {
             // 计算单元矩阵
@@ -39,7 +40,7 @@ namespace FEM {
             // 获取单元的自由度索引
             std::vector<int> dof_indices(num_nodes);
             for (int i = 0; i < num_nodes; ++i) {
-                dof_indices[i] = dof_manager.getNodeDof(element.getNodeId(i), 0);
+                dof_indices[i] = dof_manager.getNodeDof(var_name_, element.getNodeId(i), 0);
             }
 
             // 组装到Triplet列表
@@ -52,5 +53,6 @@ namespace FEM {
 
     private:
         std::unique_ptr<Kernel<TDim, TScalar>> kernel_;
+        std::string var_name_;
     };
 }

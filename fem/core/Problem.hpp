@@ -22,14 +22,24 @@ namespace FEM {
             : geometry_(std::move(geometry)), solver_type_(solver_type) {
             physics_fields_.push_back(std::move(physics));
             dof_manager_ = std::make_unique<DofManager>(geometry_->getMesh());
-            dof_manager_->buildDofMap(1);
+            
+            for (const auto& physics : physics_fields_) {
+                physics->defineVariables(*dof_manager_);
+            }
+            dof_manager_->finalize();
+            
             initializeSystem();
         }
 
         Problem(std::unique_ptr<Geometry> geometry, std::vector<std::unique_ptr<PhysicsField<TDim, TScalar>>> physics_fields, SolverType solver_type = SolverType::SparseLU)
             : geometry_(std::move(geometry)), physics_fields_(std::move(physics_fields)), solver_type_(solver_type) {
             dof_manager_ = std::make_unique<DofManager>(geometry_->getMesh());
-            dof_manager_->buildDofMap(1);
+            
+            for (const auto& physics : physics_fields_) {
+                physics->defineVariables(*dof_manager_);
+            }
+            dof_manager_->finalize();
+            
             initializeSystem();
         }
 
@@ -89,18 +99,25 @@ namespace FEM {
             PROFILE_FUNCTION();
 
             std::vector<std::pair<int, TScalar>> all_dirichlet_dofs;
+
+            // --- 逻辑更新 ---
             for (const auto& physics : physics_fields_) {
                 for (const auto& bc : physics->getBoundaryConditions()) {
                     if (bc->getType() == BCType::Dirichlet) {
                         const auto* dirichlet_bc = dynamic_cast<const DirichletBC<TDim, TScalar>*>(bc.get());
                         if (dirichlet_bc) {
+                            // 直接从 BC 对象获取变量名
+                            const std::string& var_name = dirichlet_bc->getVariableName();
                             const TScalar bc_value = dirichlet_bc->getValue();
+                            
                             try {
-                                // 使用新的Geometry接口获取边界节点
                                 const auto& boundary_nodes = geometry_->getBoundary(dirichlet_bc->getBoundaryName()).getUniqueNodeIds();
                                 for (int node_id : boundary_nodes) {
-                                    int dof_index = dof_manager_->getNodeDof(node_id, 0);
-                                    all_dirichlet_dofs.push_back({dof_index, bc_value});
+                                    // 使用从 BC 中获取的变量名来查询 Dof
+                                    int dof_index = dof_manager_->getNodeDof(var_name, node_id, 0);
+                                    if (dof_index != -1) {
+                                        all_dirichlet_dofs.push_back({dof_index, bc_value});
+                                    }
                                 }
                             } catch (const std::runtime_error& e) {
                                 std::cerr << "Warning: " << e.what() << std::endl;
@@ -109,6 +126,7 @@ namespace FEM {
                     }
                 }
             }
+            // --- 逻辑更新结束 ---
 
             if (all_dirichlet_dofs.empty()) return;
 

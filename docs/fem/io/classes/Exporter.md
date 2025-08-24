@@ -12,9 +12,26 @@ class Exporter
 
 ## 成员函数
 
+### template<int TDim, typename TScalar, typename... Args> static void write_vtk(const std::string& filename, const Problem<TDim, TScalar>& problem, Args... var_names)
+
+将有限元问题的解导出为 VTK 格式的文件。支持选择性导出特定变量。
+
+**模板参数:**
+- `TDim` - 问题的空间维度
+- `TScalar` - 标量类型，支持double和std::complex<double>等类型
+- `Args` - 可变参数包，用于指定要导出的变量名称
+
+**参数:**
+- `filename` - 输出文件的路径
+- `problem` - 有限元问题对象的常量引用
+- `var_names` - 要导出的变量名称列表（可选）。如果不提供任何变量名，则导出所有变量。
+
+**异常:**
+- `std::runtime_error` - 当无法打开文件进行写入时抛出
+
 ### template<int TDim, typename TScalar> static void write_vtk(const std::string& filename, const Problem<TDim, TScalar>& problem)
 
-将有限元问题的解导出为 VTK 格式的文件。
+将有限元问题的所有解变量导出为 VTK 格式的文件。这是旧版本接口，向后兼容。
 
 **模板参数:**
 - `TDim` - 问题的空间维度
@@ -35,10 +52,26 @@ FEM::Problem<2> problem(std::move(mesh), std::move(physics));
 
 // ... 执行求解过程 ...
 
-// 将结果导出为VTK文件
+// 导出所有变量（向后兼容用法）
 try {
-    FEM::IO::Exporter::write_vtk("results.vtk", problem);
-    std::cout << "Results exported successfully to results.vtk" << std::endl;
+    FEM::IO::Exporter::write_vtk("results_all.vtk", problem);
+    std::cout << "All results exported successfully to results_all.vtk" << std::endl;
+} catch (const std::runtime_error& e) {
+    std::cerr << "Export failed: " << e.what() << std::endl;
+}
+
+// 只导出特定变量
+try {
+    FEM::IO::Exporter::write_vtk("results_voltage.vtk", problem, "Voltage");
+    std::cout << "Voltage results exported successfully to results_voltage.vtk" << std::endl;
+} catch (const std::runtime_error& e) {
+    std::cerr << "Export failed: " << e.what() << std::endl;
+}
+
+// 导出多个特定变量
+try {
+    FEM::IO::Exporter::write_vtk("results_multi.vtk", problem, "Voltage", "Temperature");
+    std::cout << "Voltage and Temperature results exported successfully to results_multi.vtk" << std::endl;
 } catch (const std::runtime_error& e) {
     std::cerr << "Export failed: " << e.what() << std::endl;
 }

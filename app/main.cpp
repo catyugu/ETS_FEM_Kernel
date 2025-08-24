@@ -30,10 +30,10 @@ int main() {
 
     // 5. 【新方式】创建边界条件对象，并添加到物理场
     heat_physics->addBoundaryCondition(
-        std::make_unique<FEM::DirichletBC<problem_dim>>("left", 373.15) // 施加在名为 "left" 的边界上
+        std::make_unique<FEM::DirichletBC<problem_dim>>(heat_physics->getVariableName(), "left", 373.15) // 施加在名为 "left" 的边界上
     );
     heat_physics->addBoundaryCondition(
-        std::make_unique<FEM::DirichletBC<problem_dim>>("right", 293.15) // 施加在名为 "right" 的边界上
+        std::make_unique<FEM::DirichletBC<problem_dim>>(heat_physics->getVariableName(), "right", 293.15) // 施加在名为 "right" 的边界上
     );
 
     // 6. 创建 Problem
@@ -49,4 +49,6 @@ int main() {
     Utils::Logger::instance().info("Exporting results to output.vtk...");
     FEM::IO::Exporter::write_vtk("output.vtk", *problem);
     Utils::Logger::instance().info("Export complete.");
+
+    return 0;
 }

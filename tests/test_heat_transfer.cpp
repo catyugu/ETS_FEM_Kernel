@@ -121,10 +121,10 @@ TEST_F(TestHeatTransfer, SolveHeatTransferOnImportedMesh) {
 
         // 添加边界条件到物理场
         physics->addBoundaryCondition(
-            std::make_unique<DirichletBC<dim>>("left_boundary", 323.15)
+            std::make_unique<DirichletBC<dim>>(physics->getVariableName(), "left_boundary", 323.15)
         );
         physics->addBoundaryCondition(
-            std::make_unique<DirichletBC<dim>>("right_boundary", 263.15)
+            std::make_unique<DirichletBC<dim>>(physics->getVariableName(), "right_boundary", 263.15)
         );
 
         ASSERT_GT(left_bcs, 0) << "No left boundary conditions set";
@@ -179,7 +179,7 @@ TEST_F(TestHeatTransfer, SolveHeatTransferOnImportedMesh) {
 
             if (matched_index != -1) {
                 matched_count++;
-                int dof_index = problem->getDofManager().getNodeDof(problem_nodes[matched_index]->getId(), 0);
+                int dof_index = problem->getDofManager().getNodeDof("Temperature", problem_nodes[matched_index]->getId());
                 double computed_value = solution(dof_index);
                 double reference_value = ref_temperature_data[i];
 
@@ -224,7 +224,7 @@ TEST_F(TestHeatTransfer, SolveHeatTransferOnImportedMesh) {
         EXPECT_GT(matched_count, reference_nodes.size() * 0.95)
             << "Less than 95% of reference nodes were matched";
 
-        FEM::IO::Exporter::write_vtk("test_heat_transfer.vtk", *problem);
+        FEM::IO::Exporter::write_vtk("test_heat_transfer.vtk", *problem, "Temperature");
     }
     //  打印Profiler分析报告
     std::cout<<::Utils::Profiler::instance().getReport();

@@ -13,19 +13,19 @@ template<int TDim, typename TScalar = double>
 class IKernel {
 public:
     virtual ~IKernel() = default;
-    virtual void assemble_element(const Element& element, Eigen::SparseMatrix<TScalar>& K_global, const DofManager& dof_manager) = 0;
+    virtual void assemble_element(const Element& element, std::vector<Eigen::Triplet<TScalar>>& triplet_list, const DofManager& dof_manager) = 0;
 };
 ```
 
 ### KernelWrapper
 
 ```cpp
-template<int TDim, int TNumNodes, typename TScalar = double>
+template<int TDim, typename TScalar = double>
 class KernelWrapper : public IKernel<TDim, TScalar> {
 public:
-    explicit KernelWrapper(std::unique_ptr<Kernel<TDim, TNumNodes, TScalar>> kernel);
+    KernelWrapper(std::unique_ptr<Kernel<TDim, TScalar>> kernel, const std::string& var_name);
     
-    void assemble_element(const Element& element, Eigen::SparseMatrix<TScalar>& K_global, const DofManager& dof_manager) override;
+    void assemble_element(const Element& element, std::vector<Eigen::Triplet<TScalar>>& triplet_list, const DofManager& dof_manager) override;
 };
 ```
 
@@ -79,31 +79,27 @@ explicit KernelWrapper(std::unique_ptr<Kernel<TDim, TNumNodes>> kernel);
 #### assemble_element
 
 ```cpp
-void assemble_element(const Element& element, Eigen::SparseMatrix<double>& K_global, const DofManager& dof_manager) override;
+void assemble_element(const Element& element, std::vector<Eigen::Triplet<TScalar>>& triplet_list, const DofManager& dof_manager) override;
 ```
 
-**描述**: 实现 [IKernel](#ikernel) 接口的函数。负责计算单元局部矩阵并将其组装到全局矩阵中。
+**描述**: 实现 [IKernel](#ikernel) 接口的函数。负责计算单元局部矩阵并将其组装到全局矩阵的Triplet列表中。
 
 **参数**:
 - `element` - 要组装的单元
-- `K_global` - 全局刚度矩阵（输出）
+- `triplet_list` - 稀疏矩阵的Triplet列表（输出）
 - `dof_manager` - 自由度管理器
 
 **工作流程**:
-1. 检查单元节点数是否与内核匹配
-2. 调用内核的 `compute_element_matrix` 方法计算局部矩阵
-3. 获取单元的自由度索引
-4. 将局部矩阵的元素添加到全局矩阵的相应位置
+1. 调用内核的 `compute_element_matrix` 方法计算局部矩阵
+2. 获取单元的自由度索引（使用变量名称）
+3. 将局部矩阵的元素添加到Triplet列表的相应位置
 
 ## 示例用法
 
 ```cpp
 // 在物理场类中使用内核包装器
-template<typename KernelType>
-void HeatTransfer::addKernel(std::unique_ptr<KernelType> kernel) {
-    // 创建包装器，将派生类指针安全地转换为基类接口指针
-    kernels_.push_back(std::make_unique<KernelWrapper<TDim, KernelType::NumNodes>>(std::move(kernel)));
-}
+auto kernel = std::make_unique<HeatDiffusionKernel<2>>();
+auto wrapper = std::make_unique<KernelWrapper<2>>(std::move(kernel), "Temperature");
 ```
 
 ## 设计模式
@@ -114,11 +110,11 @@ void HeatTransfer::addKernel(std::unique_ptr<KernelType> kernel) {
 2. **工厂模式**: `addKernel` 方法充当工厂，创建适当的内核包装器
 3. **多态性**: 通过 [IKernel](#ikernel) 接口，物理场类可以处理任何类型的内核
 
-## 注意事项
+## 实现细节
 
-1. [KernelWrapper](#kernelwrapper) 会自动检查单元节点数是否与内核匹配，不匹配的单元会被忽略
-2. 该机制支持混合网格，即同一物理场可以使用多种不同类型的单元
-3. 内核的所有权通过智能指针管理，确保内存安全
+与之前的版本相比，[KernelWrapper](#kernelwrapper) 现在需要一个额外的变量名称参数。这是因为系统现在支持多物理场，每个内核需要知道它正在处理哪个变量，以便从自由度管理器获取正确的自由度索引。
+
+此外，`assemble_element`方法现在使用Triplet列表而不是直接操作稀疏矩阵，这提高了组装过程的性能。
 
 ## 依赖关系
 

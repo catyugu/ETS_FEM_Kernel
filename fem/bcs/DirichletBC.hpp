@@ -8,8 +8,9 @@ namespace FEM {
     template<int TDim, typename TScalar = double>
     class DirichletBC : public BoundaryCondition<TDim, TScalar> {
     public:
-        DirichletBC(const std::string& boundary_name, TScalar value)
-            : BoundaryCondition<TDim, TScalar>(boundary_name), value_(value) {}
+        // --- 构造函数更新 ---
+        DirichletBC(const std::string& variable_name, const std::string& boundary_name, TScalar value)
+            : BoundaryCondition<TDim, TScalar>(variable_name, boundary_name, BCType::Dirichlet), value_(value) {}
 
         // 留空，由 Problem 类统一处理
         void apply(const Geometry& geometry, const DofManager& dof_manager,

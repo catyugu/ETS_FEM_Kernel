@@ -4,7 +4,7 @@
 
 `Electrostatics` 类实现了静电场问题的有限元求解。它继承自 [PhysicsField](PhysicsField.md) 抽象基类，用于计算在给定边界条件下的电势分布。该类使用内核机制来处理不同类型的单元和计算任务。
 
-与之前版本相比，该类现在实现了单元类型过滤机制，确保只有适当类型的单元参与域内组装。
+与之前版本相比，该类现在实现了单元类型过滤机制，确保只有适当类型的单元参与域内组装，并支持多物理场功能。
 
 ## 类签名
 
@@ -12,11 +12,17 @@
 template<int TDim, typename TScalar = double>
 class Electrostatics : public PhysicsField<TDim, TScalar> {
 public:
+    Electrostatics();
+    
     template<typename KernelType>
     void addKernel(std::unique_ptr<KernelType> kernel);
     
+    const std::string& getVariableName() const override;
+    
+    void defineVariables(DofManager& dof_manager) const override;
+    
     void assemble_volume(const Mesh& mesh, const DofManager& dof_manager,
-                  Eigen::SparseMatrix<TScalar>& K_global, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) override;
+                  std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) override;
                   
     bool shouldAssembleElement(const Element& element, int problem_dim) const;
     
@@ -24,7 +30,39 @@ public:
 };
 ```
 
+## 构造函数
+
+### Electrostatics
+
+```cpp
+Electrostatics();
+```
+
+**描述**: 构造一个 Electrostatics 对象。构造函数初始化变量名称为 "Voltage"。
+
 ## 方法说明
+
+### getVariableName
+
+```cpp
+const std::string& getVariableName() const override;
+```
+
+**描述**: 获取物理场变量名称。
+
+**返回值**:
+- 字符串 "Voltage" 的常量引用
+
+### defineVariables
+
+```cpp
+void defineVariables(DofManager& dof_manager) const override;
+```
+
+**描述**: 在自由度管理器中定义电势变量。
+
+**参数**:
+- `dof_manager` - 自由度管理器引用
 
 ### addKernel
 
@@ -50,15 +88,15 @@ electrostatics->addKernel(
 
 ```cpp
 void assemble_volume(const Mesh& mesh, const DofManager& dof_manager,
-              Eigen::SparseMatrix<TScalar>& K_global, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) override;
+              std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) override;
 ```
 
-**描述**: 组装全局刚度矩阵和载荷向量。与之前版本相比，该方法现在会过滤单元类型，只对适当类型的单元进行组装。
+**描述**: 组装全局刚度矩阵和载荷向量。与之前版本相比，该方法现在会过滤单元类型，只对适当类型的单元进行组装，并使用Triplet列表提高性能。
 
 **参数**:
 - `mesh` - 网格对象的常量引用
 - `dof_manager` - 自由度管理器的常量引用
-- `K_global` - 全局刚度矩阵的引用
+- `triplet_list` - 稀疏矩阵的Triplet列表（输出）
 - `F_global` - 全局载荷向量的引用
 
 与之前版本相比，该方法现在会过滤单元类型，只对适当类型的单元进行组装：
@@ -99,14 +137,37 @@ std::string getName() const override;
 1. 实现了单元类型过滤机制，确保只有适当类型的单元参与域内组装
 2. 添加了 `shouldAssembleElement` 方法，用于判断单元是否应该参与组装
 3. 移除了硬编码的节点数
+4. 实现了 `getVariableName` 和 `defineVariables` 方法以支持多物理场
+5. 使用Triplet列表而不是直接操作稀疏矩阵以提高性能
 
-这些改进使得物理场可以处理混合网格，即同时包含不同类型和节点数的单元，并确保只有适当类型的单元参与计算。
+## 示例用法
 
-## 依赖关系
+```cpp
+#include "fem/physics/Electrostatics.hpp"
 
-- [PhysicsField](PhysicsField.md) - 基类
-- [Kernel](../../kernels/classes/Kernel.md) - 内核基类
-- [IKernel](../../kernels/classes/KernelWrappers.md) - 内核接口
-- [KernelWrapper](../../kernels/classes/KernelWrappers.md) - 内核包装器
-- [Mesh](../../mesh/classes/Mesh.md) - 网格
-- [DofManager](../../core/classes/DofManager.md) - 自由度管理器
+// 创建静电场物理实例
+auto electrostatics = std::make_unique<FEM::Electrostatics<2>>();
+
+// 添加材料和内核
+auto material = std::make_unique<FEM::Material>();
+material->setProperty("permittivity", 8.854e-12); // 真空介电常数
+
+electrostatics->addKernel(
+    std::make_unique<FEM::ElectrostaticsKernel<2>>(std::move(material))
+);
+
+// 添加边界条件
+electrostatics->addBoundaryCondition(
+    std::make_unique<FEM::DirichletBC<2>>("Voltage", "electrode_1", 10.0)
+);
+electrostatics->addBoundaryCondition(
+    std::make_unique<FEM::DirichletBC<2>>("Voltage", "electrode_2", 0.0)
+);
+
+// 创建问题并求解
+auto geometry = FEM::Mesh::create_uniform_2d_mesh(1.0, 1.0, 10, 10);
+auto problem = std::make_unique<FEM::Problem<2>>(std::move(geometry), std::move(electrostatics));
+problem->assemble();
+problem->applyBCs();
+problem->solve();
+```

@@ -21,10 +21,10 @@ void test_electrostatics() {
 
     // 使用物理场管理边界条件 - 修改为正确的边界名称
     physics->addBoundaryCondition(
-        std::make_unique<FEM::DirichletBC<dim>>("left", 10.0)
+        std::make_unique<FEM::DirichletBC<dim>>("Voltage", "left", 10.0)
     );
     physics->addBoundaryCondition(
-        std::make_unique<FEM::DirichletBC<dim>>("right", 0.0)
+        std::make_unique<FEM::DirichletBC<dim>>("Voltage", "right", 0.0)
     );
 
     auto problem = std::make_unique<FEM::Problem<dim>>(std::move(mesh), std::move(physics));
@@ -76,10 +76,10 @@ TEST_F(ElectrostaticsTest, Solves2DProblem) {
 
     // 使用物理场管理边界条件 - 修改为正确的边界名称
     physics->addBoundaryCondition(
-        std::make_unique<FEM::DirichletBC<dim>>("left", 10.0)
+        std::make_unique<FEM::DirichletBC<dim>>("Voltage", "left", 10.0)
     );
     physics->addBoundaryCondition(
-        std::make_unique<FEM::DirichletBC<dim>>("right", 0.0)
+        std::make_unique<FEM::DirichletBC<dim>>("Voltage", "right", 0.0)
     );
 
     auto problem = std::make_unique<FEM::Problem<dim>>(std::move(mesh), std::move(physics));
@@ -118,10 +118,10 @@ TEST_F(ElectrostaticsTest, Solves3DProblem) {
 
     // 使用物理场管理边界条件
     physics->addBoundaryCondition(
-        std::make_unique<FEM::DirichletBC<dim>>("left", 10.0)
+        std::make_unique<FEM::DirichletBC<dim>>("Voltage", "left", 10.0)
     );
     physics->addBoundaryCondition(
-        std::make_unique<FEM::DirichletBC<dim>>("right", 0.0)
+        std::make_unique<FEM::DirichletBC<dim>>("Voltage", "right", 0.0)
     );
 
     auto problem = std::make_unique<FEM::Problem<dim>>(std::move(mesh), std::move(physics));
