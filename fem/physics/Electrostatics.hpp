@@ -20,6 +20,24 @@ namespace FEM {
     public:
         using KernelBase = Kernel<TDim, TScalar>; // 移除硬编码的节点数
 
+        Electrostatics() : variable_name_("Voltage") {}
+
+        /**
+         * @brief 获取变量名称
+         * @return 变量名称
+         */
+        const std::string& getVariableName() const override {
+            return variable_name_;
+        }
+
+        /**
+         * @brief 定义变量到自由度管理器
+         * @param dof_manager 自由度管理器
+         */
+        void defineVariables(DofManager& dof_manager) const override {
+            dof_manager.addVariable(getVariableName(), DofType::NODE, 1);
+        }
+
         /**
          * @brief 获取物理场名称
          * @return 物理场名称
@@ -27,5 +45,8 @@ namespace FEM {
         std::string getName() const override {
             return "Electrostatics";
         }
+
+    private:
+        std::string variable_name_;
     };
 }

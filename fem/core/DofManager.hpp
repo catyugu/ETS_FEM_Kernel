@@ -60,12 +60,6 @@ namespace FEM {
         int getFaceDof(const std::string& var_name, int face_id, int component = 0) const;
         int getVolumeDof(const std::string& var_name, int volume_id, int component = 0) const;
 
-        // --- 兼容旧接口 ---
-        int getNodeDof(int node_id, int dof_component = 0) const;
-        int getEdgeDof(int edge_id, int dof_component = 0) const;
-        int getFaceDof(int face_id, int dof_component = 0) const;
-        int getVolumeDof(int volume_id, int dof_component = 0) const;
-
         /**
          * @brief 获取自由度总数
          * @return 自由度总数

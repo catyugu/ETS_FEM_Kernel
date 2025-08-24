@@ -142,22 +142,6 @@ namespace FEM {
         return -1; // 未找到
     }
 
-    int DofManager::getNodeDof(int node_id, int dof_component) const {
-        return getNodeDof("default", node_id, dof_component);
-    }
-
-    int DofManager::getEdgeDof(int edge_id, int dof_component) const {
-        return getEdgeDof("default", edge_id, dof_component);
-    }
-
-    int DofManager::getFaceDof(int face_id, int dof_component) const {
-        return getFaceDof("default", face_id, dof_component);
-    }
-
-    int DofManager::getVolumeDof(int volume_id, int dof_component) const {
-        return getVolumeDof("default", volume_id, dof_component);
-    }
-
     size_t DofManager::getNumDofs() const { 
         return total_dofs_; 
     }

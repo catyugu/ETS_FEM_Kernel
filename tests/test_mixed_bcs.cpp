@@ -49,12 +49,12 @@ TEST_F(MixedBoundaryConditionsTest, HeatTransfer_Neumann_Cauchy_1D) {
 
     // 5. 添加边界条件
     // 左端 (x=0) 添加 Neumann 边界条件
-    auto neumann_bc = std::make_unique<FEM::NeumannBC<problem_dim>>("left", q0);
+    auto neumann_bc = std::make_unique<FEM::NeumannBC<problem_dim>>("Temperature", "left", q0);
     std::cout << "Adding Neumann BC with value: " << -q0 << std::endl;
     heat_physics->addBoundaryCondition(std::move(neumann_bc));
     
     // 右端 (x=L) 添加 Cauchy 边界条件
-    auto cauchy_bc = std::make_unique<FEM::CauchyBC<problem_dim>>("right", h, T_inf);
+    auto cauchy_bc = std::make_unique<FEM::CauchyBC<problem_dim>>("Temperature", "right", h, T_inf);
     std::cout << "Adding Cauchy BC with h: " << h << ", T_inf: " << T_inf << std::endl;
     heat_physics->addBoundaryCondition(std::move(cauchy_bc));
 
@@ -86,7 +86,7 @@ TEST_F(MixedBoundaryConditionsTest, HeatTransfer_Neumann_Cauchy_1D) {
         const double node_x = node->getX();
 
         // 获取该节点的自由度索引
-        const int dof_index = dof_manager.getNodeDof(node_id, 0);
+        const int dof_index = dof_manager.getNodeDof("Temperature", node_id);
 
         // 获取有限元计算得到的温度值
         const double numerical_temp = solution_vector(dof_index);
@@ -124,9 +124,9 @@ TEST_F(MixedBoundaryConditionsTest, HeatTransfer_2D_Analytic) {
 
     // --- 4. 施加边界条件 ---
     // 左边界 (x=0): Cauchy, -k*dT/dx = h(T - T_inf) => -1*2 = 2(1 - T_inf) => T_inf = 2
-    heat_physics->addBoundaryCondition(std::make_unique<FEM::CauchyBC<problem_dim>>("left", -2.0, 2.0));
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::CauchyBC<problem_dim>>("Temperature", "left", -2.0, 2.0));
     // 右边界 (x=1): Dirichlet, T(1,y) = 2*1 + 1 = 3
-    heat_physics->addBoundaryCondition(std::make_unique<FEM::DirichletBC<problem_dim>>("right", 3.0));
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::DirichletBC<problem_dim>>("Temperature", "right", 3.0));
     // 顶部 (y=1) 和 底部 (y=0): Neumann, dT/dy = 0 (绝热)
     // heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("top", 0.0));
     // heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("bottom", 0.0));
@@ -144,7 +144,7 @@ TEST_F(MixedBoundaryConditionsTest, HeatTransfer_2D_Analytic) {
     for (const auto& node : fem_mesh.getNodes()) {
         const double node_x = node->getX();
         const double node_y = node->getY();
-        const int dof_index = dof_manager.getNodeDof(node->getId(), 0);
+        const int dof_index = dof_manager.getNodeDof("Temperature", node->getId());
         const double numerical_temp = solution_vector(dof_index);
         const double analytical_temp = analytical_solution(node_x, node_y);
         EXPECT_NEAR(numerical_temp, analytical_temp, 1e-5);
@@ -171,14 +171,14 @@ TEST_F(MixedBoundaryConditionsTest, HeatTransfer_3D_Analytic) {
 
     // --- 4. 施加边界条件 ---
     // 底面 (z=0): Dirichlet, T(x,y,0) = 10
-    heat_physics->addBoundaryCondition(std::make_unique<FEM::DirichletBC<problem_dim>>("bottom", 10.0));
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::DirichletBC<problem_dim>>("Temperature", "bottom", 10.0));
     // 顶面 (z=1): Neumann, -k*dT/dz = -1*5 = -5
-    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("top", 5.0));
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("Temperature", "top", 5.0));
     // 其他四个侧面: Neumann, dT/dn = 0 (绝热)
-    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("front", 0.0));
-    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("back", 0.0));
-    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("left", 0.0));
-    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("right", 0.0));
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("Temperature", "front", 0.0));
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("Temperature", "back", 0.0));
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("Temperature", "left", 0.0));
+    heat_physics->addBoundaryCondition(std::make_unique<FEM::NeumannBC<problem_dim>>("Temperature", "right", 0.0));
 
     // --- 5. 创建问题并求解 ---
     auto problem = std::make_unique<FEM::Problem<problem_dim>>(std::move(mesh), std::move(heat_physics));
@@ -194,7 +194,7 @@ TEST_F(MixedBoundaryConditionsTest, HeatTransfer_3D_Analytic) {
         const double node_x = node->getX();
         const double node_y = node->getY();
         const double node_z = node->getZ();
-        const int dof_index = dof_manager.getNodeDof(node->getId(), 0);
+        const int dof_index = dof_manager.getNodeDof("Temperature", node->getId());
         const double numerical_temp = solution_vector(dof_index);
         const double analytical_temp = analytical_solution(node_x, node_y, node_z);
         EXPECT_NEAR(numerical_temp, analytical_temp, 1e-5);

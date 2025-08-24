@@ -22,10 +22,10 @@ void test_heat_transfer() {
     // 使用物理场管理边界条件
     // 注意：对于程序生成的简单网格，我们使用假的边界名称
     physics->addBoundaryCondition(
-        std::make_unique<FEM::DirichletBC<dim>>("left", 100.0)
+        std::make_unique<FEM::DirichletBC<dim>>("Temperature", "left", 100.0)
     );
     physics->addBoundaryCondition(
-        std::make_unique<FEM::DirichletBC<dim>>("right", 0.0)
+        std::make_unique<FEM::DirichletBC<dim>>("Temperature", "right", 0.0)
     );
 
     auto problem = std::make_unique<FEM::Problem<dim>>(std::move(mesh), std::move(physics));
@@ -77,10 +77,10 @@ TEST_F(HeatTransferTest, Solves2DProblem) {
 
     // 添加边界条件 - 使用物理场管理
     physics->addBoundaryCondition(
-        std::make_unique<FEM::DirichletBC<dim>>("left", 100.0)
+        std::make_unique<FEM::DirichletBC<dim>>("Temperature", "left", 100.0)
     );
     physics->addBoundaryCondition(
-        std::make_unique<FEM::DirichletBC<dim>>("right", 0.0)
+        std::make_unique<FEM::DirichletBC<dim>>("Temperature", "right", 0.0)
     );
 
     auto problem = std::make_unique<FEM::Problem<dim>>(std::move(mesh), std::move(physics));
@@ -119,10 +119,10 @@ TEST_F(HeatTransferTest, Solves3DProblem) {
 
     // 添加边界条件 - 使用物理场管理
     physics->addBoundaryCondition(
-        std::make_unique<FEM::DirichletBC<dim>>("left", 100.0)
+        std::make_unique<FEM::DirichletBC<dim>>("Temperature", "left", 100.0)
     );
     physics->addBoundaryCondition(
-        std::make_unique<FEM::DirichletBC<dim>>("right", 0.0)
+        std::make_unique<FEM::DirichletBC<dim>>("Temperature", "right", 0.0)
     );
 
     auto problem = std::make_unique<FEM::Problem<dim>>(std::move(mesh), std::move(physics));

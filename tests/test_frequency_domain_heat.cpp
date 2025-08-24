@@ -40,10 +40,10 @@ TEST(FrequencyDomainTest, 1DHeatWave) {
 
     // 5. 添加边界条件
     heat_physics->addBoundaryCondition(
-        std::make_unique<FEM::DirichletBC<dim, ComplexScalar>>("left", ComplexScalar(1.0, 0.0))
+        std::make_unique<FEM::DirichletBC<dim, ComplexScalar>>("Temperature", "left", ComplexScalar(1.0, 0.0))
     );
     heat_physics->addBoundaryCondition(
-        std::make_unique<FEM::DirichletBC<dim, ComplexScalar>>("right", ComplexScalar(0.0, 0.0))
+        std::make_unique<FEM::DirichletBC<dim, ComplexScalar>>("Temperature", "right", ComplexScalar(0.0, 0.0))
     );
     
     // 6. 创建 Problem (使用复数类型)
@@ -67,7 +67,7 @@ TEST(FrequencyDomainTest, 1DHeatWave) {
     double max_error = 0.0;
     for (const auto& node_ptr : result_mesh.getNodes()) {
         const auto& node = *node_ptr;
-        int dof_index = problem->getDofManager().getNodeDof(node.getId(), 0);
+        int dof_index = problem->getDofManager().getNodeDof("Temperature", node.getId());
         ComplexScalar fem_val = solution(dof_index);
         ComplexScalar analytical_val = analytical_solution(node.getX());
         

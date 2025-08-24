@@ -4,13 +4,19 @@
 
 `PhysicsField` 是所有物理场问题的抽象基类。它定义了物理场问题必须实现的接口，包括组装全局矩阵和向量、应用边界条件等方法。通过继承这个基类，可以实现各种具体的物理场问题，如热传导、静电场等。
 
+与之前的版本相比，该类现在支持多物理场，需要定义变量名称并管理自由度。
+
 ## 类签名
 
-```
+```cpp
 template<int TDim, typename TScalar = double>
 class PhysicsField {
 public:
     virtual ~PhysicsField() = default;
+    
+    virtual const std::string& getVariableName() const = 0;
+    
+    virtual void defineVariables(DofManager& dof_manager) const = 0;
     
     virtual void assemble_volume(const Mesh& mesh, const DofManager& dof_manager,
                          std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) = 0;
@@ -28,9 +34,30 @@ public:
 
 ## 方法说明
 
+### getVariableName
+
+```cpp
+virtual const std::string& getVariableName() const = 0;
+```
+
+**描述**: 纯虚函数，由派生类实现。返回物理场变量的名称。
+
+**返回值**: 物理场变量名称的字符串常量引用
+
+### defineVariables
+
+```cpp
+virtual void defineVariables(DofManager& dof_manager) const = 0;
+```
+
+**描述**: 纯虚函数，由派生类实现。负责在自由度管理器中定义物理场变量。
+
+**参数**:
+- `dof_manager` - 自由度管理器引用
+
 ### assemble_volume
 
-```
+```cpp
 virtual void assemble_volume(const Mesh& mesh, const DofManager& dof_manager,
                      std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global) = 0;
 ```
@@ -45,7 +72,7 @@ virtual void assemble_volume(const Mesh& mesh, const DofManager& dof_manager,
 
 ### applyNaturalBCs
 
-```
+```cpp
 virtual void applyNaturalBCs(const Geometry& geometry, const DofManager& dof_manager,
                                     std::vector<Eigen::Triplet<TScalar>>& triplet_list, Eigen::Matrix<TScalar, Eigen::Dynamic, 1>& F_global);
 ```
@@ -60,7 +87,7 @@ virtual void applyNaturalBCs(const Geometry& geometry, const DofManager& dof_man
 
 ### getName
 
-```
+```cpp
 virtual std::string getName() const = 0;
 ```
 
@@ -70,7 +97,7 @@ virtual std::string getName() const = 0;
 
 ## 示例用法
 
-```
+```cpp
 // 创建具体的物理场实例
 auto physics = std::make_unique<FEM::HeatTransfer<2>>();
 // 或
@@ -81,13 +108,23 @@ auto geometry = FEM::Mesh::create_uniform_1d_mesh(1.0, 10);
 auto problem = std::make_unique<FEM::Problem<2>>(std::move(geometry), std::move(physics));
 ```
 
+## 实现细节
+
+与之前的版本相比，`PhysicsField` 现在需要实现两个新的纯虚函数：
+
+1. `getVariableName` - 返回物理场变量的名称，用于在自由度管理器中查找正确的自由度索引
+2. `defineVariables` - 在自由度管理器中定义物理场变量
+
+这些变化支持了多物理场功能，每个物理场都需要明确声明其变量名称和自由度需求。
+
 ## 注意事项
 
 1. 所有具体的物理场类都必须继承自`PhysicsField`并实现所有纯虚函数
 2. `assemble`方法是有限元计算的核心，负责将局部单元矩阵组装成全局矩阵
-3. `getName`方法用于标识物理场类型，便于调试和日志记录
+3. `getVariableName`方法用于标识物理场变量类型，便于在自由度管理器中查找
 4. 为了提高性能，现在使用Triplet列表而不是直接操作稀疏矩阵
 5. `applyNaturalBCs`方法现在接受Geometry对象而不是Mesh对象
+6. 物理场类必须在`defineVariables`方法中调用`dof_manager.addVariable()`来注册其变量
 
 ## 依赖关系
 

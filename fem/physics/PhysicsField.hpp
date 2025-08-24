@@ -23,6 +23,18 @@ namespace FEM {
         virtual ~PhysicsField() = default;
 
         /**
+         * @brief 获取变量名称
+         * @return 变量名称
+         */
+        virtual const std::string& getVariableName() const = 0;
+
+        /**
+         * @brief 定义变量到自由度管理器
+         * @param dof_manager 自由度管理器
+         */
+        virtual void defineVariables(DofManager& dof_manager) const = 0;
+
+        /**
          * @brief 添加一个计算核
          * @tparam KernelType 核类型
          * @param kernel 计算核指针
@@ -30,7 +42,7 @@ namespace FEM {
         template<typename KernelType>
         void addKernel(std::unique_ptr<KernelType> kernel) {
             // 在内部创建包装器，将派生类指针安全地转换为基类接口指针
-            kernels_.push_back(std::make_unique<KernelWrapper<TDim, TScalar>>(std::move(kernel)));
+            kernels_.push_back(std::make_unique<KernelWrapper<TDim, TScalar>>(std::move(kernel), this->getVariableName()));
         }
 
         /**

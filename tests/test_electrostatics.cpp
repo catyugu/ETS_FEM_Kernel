@@ -122,10 +122,10 @@ TEST_F(TestElectrostatics, SolveElectrostaticsOnImportedMesh) {
 
         // 添加边界条件到物理场
         physics->addBoundaryCondition(
-            std::make_unique<DirichletBC<dim>>("left_boundary", 0.1)
+            std::make_unique<DirichletBC<dim>>(physics->getVariableName(), "left_boundary", 0.1)
         );
         physics->addBoundaryCondition(
-            std::make_unique<DirichletBC<dim>>("right_boundary", 0.0)
+            std::make_unique<DirichletBC<dim>>(physics->getVariableName(), "right_boundary", 0.0)
         );
 
         ASSERT_GT(left_bcs, 0) << "No left boundary conditions set";
@@ -183,7 +183,7 @@ TEST_F(TestElectrostatics, SolveElectrostaticsOnImportedMesh) {
 
             if (matched_index != -1) {
                 matched_count++;
-                int dof_index = problem->getDofManager().getNodeDof(problem_nodes[matched_index]->getId(), 0);
+                int dof_index = problem->getDofManager().getNodeDof("Voltage", problem_nodes[matched_index]->getId());
                 double computed_value = solution(dof_index);
                 double reference_value = ref_potential_data[i];
 

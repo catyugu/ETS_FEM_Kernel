@@ -55,10 +55,10 @@ TEST_F(TestHeatTransfer, SolveHeatTransferOnImportedMesh) {
 
         ::Utils::Profiler::instance().end();
 
+        ::Utils::Profiler::instance().begin("Test::SetupPhysics");
         constexpr int dim = 3;
         auto physics = std::make_unique<HeatTransfer< dim>>();
 
-        constexpr int num_nodes_per_elem = 4;
         physics->addKernel(
             std::make_unique<HeatDiffusionKernel<dim>>(*material)
         );
@@ -76,13 +76,13 @@ TEST_F(TestHeatTransfer, SolveHeatTransferOnImportedMesh) {
             max_x = std::max(max_x, coords[0]);
         }
 
-        double tolerance = 1e-7; // 使用相对容差
+        double tolerance = 1e-8; // 使用相对容差
 
         std::cout << "X range: [" << min_x << ", " << max_x << "], tolerance: " << tolerance << std::endl;
 
         // 创建临时存储边界节点的容器
         std::vector<int> left_boundary_nodes, right_boundary_nodes;
-        
+
         for (const auto& node : nodes) {
             const auto& coords = node->getCoords();
             // 左侧边界 (x ≈ min_x)
@@ -121,10 +121,10 @@ TEST_F(TestHeatTransfer, SolveHeatTransferOnImportedMesh) {
 
         // 添加边界条件到物理场
         physics->addBoundaryCondition(
-            std::make_unique<DirichletBC<dim>>("left_boundary", 323.15)
+            std::make_unique<DirichletBC<dim>>(physics->getVariableName(), "left_boundary", 323.15)
         );
         physics->addBoundaryCondition(
-            std::make_unique<DirichletBC<dim>>("right_boundary", 263.15)
+            std::make_unique<DirichletBC<dim>>(physics->getVariableName(), "right_boundary", 263.15)
         );
 
         ASSERT_GT(left_bcs, 0) << "No left boundary conditions set";
@@ -136,10 +136,15 @@ TEST_F(TestHeatTransfer, SolveHeatTransferOnImportedMesh) {
         // 创建问题实例
         auto problem = std::make_unique<Problem<dim>>(std::move(geometry), std::move(physics), SolverType::SparseLU);
 
+        ::Utils::Profiler::instance().end();
+
+
         // 组装和求解
         EXPECT_NO_THROW(problem->assemble()) << "Assembly should not throw";
         EXPECT_NO_THROW(problem->solve()) << "Solving should not throw";
 
+
+        ::Utils::Profiler::instance().begin("Test::PostProcessing");
         // 读取参考数据 - 直接读取温度数据
         std::vector<double> ref_temperature_data;
         std::unique_ptr<Mesh> ref_mesh;
@@ -179,7 +184,7 @@ TEST_F(TestHeatTransfer, SolveHeatTransferOnImportedMesh) {
 
             if (matched_index != -1) {
                 matched_count++;
-                int dof_index = problem->getDofManager().getNodeDof(problem_nodes[matched_index]->getId(), 0);
+                int dof_index = problem->getDofManager().getNodeDof("Temperature", problem_nodes[matched_index]->getId());
                 double computed_value = solution(dof_index);
                 double reference_value = ref_temperature_data[i];
 
@@ -224,7 +229,8 @@ TEST_F(TestHeatTransfer, SolveHeatTransferOnImportedMesh) {
         EXPECT_GT(matched_count, reference_nodes.size() * 0.95)
             << "Less than 95% of reference nodes were matched";
 
-        FEM::IO::Exporter::write_vtk("test_heat_transfer.vtk", *problem);
+        FEM::IO::Exporter::write_vtk("test_heat_transfer.vtk", *problem, "Temperature");
+        ::Utils::Profiler::instance().end();
     }
     //  打印Profiler分析报告
     std::cout<<::Utils::Profiler::instance().getReport();

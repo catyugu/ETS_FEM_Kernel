@@ -22,11 +22,12 @@ class NeumannBC : public BoundaryCondition<TDim, TScalar>
 ## 构造函数
 
 ```cpp
-NeumannBC(const std::string& boundary_name, TScalar value)
+NeumannBC(const std::string& variable_name, const std::string& boundary_name, TScalar value)
 ```
 
 ### 参数
 
+- `variable_name` - 变量名称，用于标识此边界条件应用到哪个物理场变量
 - `boundary_name` - 边界名称，用于标识网格中的特定边界
 - `value` - 边界上的通量值
 
@@ -56,6 +57,14 @@ void apply(const Geometry& geometry, const DofManager& dof_manager,
 TScalar getValue() const { return value_; }
 ```
 
+### getVariableName
+
+获取变量名称。
+
+```cpp
+const std::string& getVariableName() const { return variable_name_; }
+```
+
 ### getType
 
 获取边界条件类型。
@@ -72,10 +81,10 @@ BCType getType() const override
 #include "fem/bcs/NeumannBC.hpp"
 
 // 创建热流边界条件
-auto heat_flux_bc = std::make_unique<NeumannBC<3>>("heated_surface", 1000.0); // 1000 W/m²
+auto heat_flux_bc = std::make_unique<NeumannBC<3>>("Temperature", "heated_surface", 1000.0); // 1000 W/m²
 
 // 创建电场通量边界条件
-auto electric_flux_bc = std::make_unique<NeumannBC<2>>("insulated_boundary", 0.0); // 0 C/m²
+auto electric_flux_bc = std::make_unique<NeumannBC<2>>("Voltage", "insulated_boundary", 0.0); // 0 C/m²
 
 // 添加到物理场
 heat_physics->addBoundaryCondition(std::move(heat_flux_bc));
@@ -93,8 +102,11 @@ electrostatics_physics->addBoundaryCondition(std::move(electric_flux_bc));
    - 计算积分贡献
 4. 将计算结果组装到全局右端向量中
 
+与之前的版本相比，`NeumannBC` 现在需要一个额外的 `variable_name` 参数。这是因为系统现在支持多物理场，每个边界条件必须明确指定它应用到哪个变量上。
+
 ## 注意事项
 
 - Neumann边界条件是对边界条件的自然弱形式实现，直接贡献到右端向量中
 - 该类使用 [FEValues](../../core/classes/FEValues.md) 的现代迭代器接口，避免了手动管理积分点状态
 - 边界条件的值应根据具体物理问题确定单位和符号
+- 变量名称必须与物理场中定义的变量名称匹配
