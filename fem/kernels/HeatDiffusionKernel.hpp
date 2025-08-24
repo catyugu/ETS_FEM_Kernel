@@ -3,6 +3,7 @@
 #include "../materials/Material.hpp"
 #include "../core/FEValues.hpp"
 #include <complex>
+#include <memory>
 
 namespace FEM {
     template<int TDim, typename TScalar = double>
@@ -18,11 +19,14 @@ namespace FEM {
 
             MatrixType K_elem = MatrixType::Zero(num_nodes, num_nodes);
 
-            // 使用新的FEValues构造函数，自动选择合适的积分阶数
-            FEValues fe_values(element, AnalysisType::SCALAR_DIFFUSION);
+            // 使用重初始化功能
+            if (!fe_values_) {
+                fe_values_ = std::make_unique<FEValues>();
+            }
+            fe_values_->reinit(element, AnalysisType::SCALAR_DIFFUSION);
             const MaterialProperty& k_prop = mat_.getProperty("thermal_conductivity");
 
-            for (const auto& q_point : fe_values) {
+            for (const auto& q_point : *fe_values_) {
                 double k = k_prop.evaluate();
 
                 // --- 正确的实现 ---
@@ -37,5 +41,6 @@ namespace FEM {
         }
     private:
         const Material& mat_;
+        mutable std::unique_ptr<FEValues> fe_values_;
     };
 }

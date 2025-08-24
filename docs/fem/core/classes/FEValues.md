@@ -18,19 +18,9 @@ class FEValues
 
 ## 构造函数
 
-### FEValues(const Element& elem, int order, AnalysisType analysis_type)
+### FEValues()
 
-构造函数，初始化FEValues对象。
-
-**参数:**
-- `elem` - 要计算的单元引用
-- `order` - 积分阶数
-- `analysis_type` - 分析类型（如标量扩散问题）
-
-**异常:**
-- `std::runtime_error` - 当雅可比行列式非正时抛出
-
-## 构造函数
+默认构造函数，创建一个未初始化的FEValues对象。需要配合[reinit()](#void-reinitconst-element-elem-int-order-analysistype-analysis_type)函数使用，用于对象重用以提高性能。
 
 ### FEValues(const Element& elem, int order, AnalysisType analysis_type)
 
@@ -53,6 +43,23 @@ class FEValues
 - `analysis_type` - 分析类型（如标量扩散问题）
 
 ## 成员函数
+
+### void reinit(const Element& elem, int order, AnalysisType analysis_type)
+
+重新初始化FEValues对象，用于重用已创建的对象以提高性能。
+
+**参数:**
+- `elem` - 要计算的单元引用
+- `order` - 积分阶数
+- `analysis_type` - 分析类型（如标量扩散问题）
+
+### void reinit(const Element& elem, AnalysisType analysis_type)
+
+重新初始化FEValues对象，使用推荐的积分阶数。
+
+**参数:**
+- `elem` - 要计算的单元引用
+- `analysis_type` - 分析类型（如标量扩散问题）
 
 ### size_t n_quad_points() const
 
@@ -85,7 +92,6 @@ class FEValues
 
 **返回值:**
 - 指定节点在指定积分点上的形函数值
-
 
 ## QuadraturePoint 类
 
@@ -141,6 +147,15 @@ for (size_t q = 0; q < fe_values.n_quad_points(); ++q) {
     double value = fe_values.shape_value(node_index, q);
     // ...
 }
+
+// 重用对象的示例（性能优化）
+FEM::FEValues fe_values; // 使用默认构造函数
+for (const auto& element : mesh.getElements()) {
+    fe_values.reinit(element, FEM::AnalysisType::SCALAR_DIFFUSION); // 重用对象
+    for (const auto& q_point : fe_values) {
+        // 执行计算...
+    }
+}
 ```
 
 ## 实现细节
@@ -152,6 +167,8 @@ for (size_t q = 0; q < fe_values.n_quad_points(); ++q) {
 与之前的实现相比，现在通过 [ReferenceElement](ReferenceElement.md) 类获取形函数和积分点信息。这种设计利用了缓存机制，避免了重复计算，提高了性能。此外，B矩阵的构建已从该类中移出，由各个物理Kernel负责构建。这样使得 `FEValues` 类更加通用，可以适用于不同类型的物理问题，而不仅仅是标量扩散问题。
 
 现在 `FEValues` 类已整合了 `FEFaceValues` 的功能，可以处理任何类型的单元（体单元或面单元）。同时引入了现代C++迭代器接口，使得使用更加安全和便捷，避免了手动调用 `reinit()` 函数可能带来的错误。
+
+通过引入默认构造函数和[reinit()](#void-reinitconst-element-elem-int-order-analysistype-analysis_type)函数，支持对象重用，避免了在循环中重复创建和销毁对象的开销，显著提高了性能。
 
 ## 依赖关系
 

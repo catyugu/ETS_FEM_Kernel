@@ -134,7 +134,7 @@ TEST_F(TestHeatTransfer, SolveHeatTransferOnImportedMesh) {
         std::cout << "Right boundary conditions: " << right_bcs << std::endl;
 
         // 创建问题实例
-        auto problem = std::make_unique<Problem<dim>>(std::move(geometry), std::move(physics), SolverType::SparseLU);
+        auto problem = std::make_unique<Problem<dim>>(std::move(geometry), std::move(physics), SolverType::ConjugateGradient);
 
         ::Utils::Profiler::instance().end();
 
