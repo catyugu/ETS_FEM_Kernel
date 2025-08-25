@@ -7,6 +7,7 @@
 #include "../core/Problem.hpp"
 #include <complex>
 #include <iomanip>
+#include <numeric> // 需要包含 <numeric> 用于 std::accumulate
 
 namespace FEM {
     namespace IO {
@@ -39,17 +40,23 @@ namespace FEM {
 
                 // 写入网格和解数据
                 write_mesh_data(file, problem);
-                
+
                 // 调用新的、带导出列表的 write_solution_data
                 write_solution_data(file, problem, variables_to_export);
             }
-            
+
             // 向后兼容的重载版本 - 导出所有变量
             template<int TDim, typename TScalar>
             static void write_vtk(const std::string& filename, const Problem<TDim, TScalar>& problem) {
-                write_vtk<TDim, TScalar>(filename, problem); // 调用可变参数版本，但不传递任何变量名
+                // FIX: 修正了对可变参数模板的调用，之前为空调用会引起递归。
+                // 现在创建一个空的变量名集合，以调用正确的重载。
+                const std::set<std::string> empty_set;
+                write_solution_data(std::ofstream(filename), problem, empty_set);
+
+                // 或者更简洁地直接调用主函数
+                write_vtk<TDim, TScalar>(filename, problem, {});
             }
-            
+
         private:
             template<typename TScalar>
             static std::string getTypeName() {
@@ -58,16 +65,16 @@ namespace FEM {
                 if (std::is_same_v<TScalar, int>) return "int";
                 return "unknown";
             }
-            
+
             template<int TDim>
             static int getVtkCellType(ElementType type) {
                 switch (type) {
-                    case ElementType::Line: return 3;
-                    case ElementType::Triangle: return 5;
-                    case ElementType::Quadrilateral: return 9;
-                    case ElementType::Tetrahedron: return 10;
-                    case ElementType::Hexahedron: return 12;
-                    default: return 1; // VTK_VERTEX
+                    case ElementType::Line: return 3;          // VTK_LINE
+                    case ElementType::Triangle: return 5;      // VTK_TRIANGLE
+                    case ElementType::Quadrilateral: return 9; // VTK_QUAD
+                    case ElementType::Tetrahedron: return 10;   // VTK_TETRA
+                    case ElementType::Hexahedron: return 12;    // VTK_HEXAHEDRON
+                    default: return 1;                         // VTK_VERTEX
                 }
             }
 
@@ -90,12 +97,25 @@ namespace FEM {
                     }
                 }
 
+                // --- START OF FIXES ---
+
+                // FIX 1: 动态计算 CELLS 列表的总大小
+                // VTK 要求这个大小是所有单元的（节点数 + 1）的总和。
+                // 之前的 `elements.size() * (TDim + 2)` 是错误的，因为它假设所有单元节点数都相同。
+                size_t total_cell_list_size = 0;
+                for (const auto& elem_ptr : elements) {
+                    total_cell_list_size += (1 + elem_ptr->getNodeIds().size());
+                }
+
                 // 写入单元
-                file << "\nCELLS " << elements.size() << " " << elements.size() * (TDim + 2) << "\n";
+                file << "\nCELLS " << elements.size() << " " << total_cell_list_size << "\n";
                 for (const auto& elem_ptr : elements) {
                     const auto& elem = *elem_ptr;
                     const auto& node_ids = elem.getNodeIds();
-                    file << (TDim + 1);
+
+                    // FIX 2: 写入每个单元的真实节点数，而不是硬编码的 `TDim + 1`
+                    file << node_ids.size();
+
                     for (const auto& node_id : node_ids) {
                         file << " " << node_id;
                     }
@@ -104,10 +124,12 @@ namespace FEM {
 
                 // 写入单元类型
                 file << "\nCELL_TYPES " << elements.size() << "\n";
-                for (size_t i = 0; i < elements.size(); ++i) {
-                    // 5 = VTK_TRIANGLE, 10 = VTK_TETRA
-                    file << (TDim == 2 ? 5 : 10) << "\n";
+                for (const auto& elem_ptr : elements) {
+                    // FIX 3: 使用 `getVtkCellType` 辅助函数获取正确的 VTK 单元类型码
+                    // 之前的 `(TDim == 2 ? 5 : 10)` 假设所有单元都是三角形或四面体，是错误的。
+                    file << getVtkCellType<TDim>(elem_ptr->getType()) << "\n";
                 }
+                // --- END OF FIXES ---
             }
             
             /**
